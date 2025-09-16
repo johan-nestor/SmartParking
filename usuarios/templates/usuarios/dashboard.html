@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12 text-center mb-4">
+        <h2>Bienvenido, {{ user.username }} 👋</h2>
+        <p class="text-muted">Este es tu panel principal en SmartParking.</p>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Perfil -->
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Mi Perfil</h5>
+                <p class="card-text">
+                    Nombre: {{ user.first_name }} {{ user.last_name }} <br>
+                    Usuario: {{ user.username }} <br>
+                    Email: {{ user.email }}
+                </p>
+                <a href="#" class="btn btn-primary">Editar Perfil</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Vehículos -->
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Mis Vehículos</h5>
+                <p class="card-text">Registra, edita o elimina los vehículos que utilizas en el sistema.</p>
+                <a href="#" class="btn btn-success">Gestionar Vehículos</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body">
+                <h5 class="card-title">Historial</h5>
+                <p class="card-text">Consulta tus registros de entrada y salida de vehículos.</p>
+                <a href="#" class="btn btn-secondary">Ver Historial</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

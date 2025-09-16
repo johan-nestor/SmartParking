@@ -1,0 +1,47 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Mis Vehículos</h2>
+    <a href="{% url 'agregar_vehiculo' %}" class="btn btn-primary mb-3">Agregar Vehículo</a>
+
+    <table class="table table-striped">
+        <thead>
+            <tr>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Placa</th>
+                <th>Color</th>
+                <th>Foto Vehículo</th>
+                <th>Foto Placa</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for v in vehiculos %}
+            <tr>
+                <td>{{ v.marca }}</td>
+                <td>{{ v.modelo }}</td>
+                <td>{{ v.placa }}</td>
+                <td>{{ v.color }}</td>
+                <td>
+                    {% if v.foto_vehiculo %}
+                        <img src="{{ v.foto_vehiculo.url }}" style="max-width:100px;">
+                    {% endif %}
+                </td>
+                <td>
+                    {% if v.foto_placa %}
+                        <img src="{{ v.foto_placa.url }}" style="max-width:100px;">
+                    {% endif %}
+                </td>
+                <td>
+                    <a href="{% url 'editar_vehiculo' v.id %}" class="btn btn-warning btn-sm">Editar</a>
+                    <a href="{% url 'eliminar_vehiculo' v.id %}" class="btn btn-danger btn-sm">Eliminar</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="7">No tienes vehículos registrados.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

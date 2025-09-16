@@ -1,0 +1,54 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Agregar Vehículo</h2>
+    <form method="POST" enctype="multipart/form-data">
+        {% csrf_token %}
+        {% for field in form %}
+            <div class="mb-3">
+                <label class="form-label">{{ field.label }}</label>
+                {{ field }}
+                {% if field.help_text %}
+                    <small class="form-text text-muted">{{ field.help_text }}</small>
+                {% endif %}
+                {% for error in field.errors %}
+                    <div class="text-danger">{{ error }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+
+        <button type="submit" class="btn btn-primary">Registrar Vehículo</button>
+        <a href="{% url 'lista_vehiculos' %}" class="btn btn-secondary">Cancelar</a>
+    </form>
+</div>
+
+<script>
+    // Previsualización de imágenes
+    const inputVehiculo = document.querySelector('#id_foto_vehiculo');
+    const inputPlaca = document.querySelector('#id_foto_placa');
+
+    function previewImage(input, previewId) {
+        input.addEventListener('change', function() {
+            const file = this.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    let preview = document.getElementById(previewId);
+                    if (!preview) {
+                        preview = document.createElement('img');
+                        preview.id = previewId;
+                        preview.style.maxWidth = '200px';
+                        preview.style.marginTop = '10px';
+                        input.parentNode.appendChild(preview);
+                    }
+                    preview.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    previewImage(inputVehiculo, 'previewVehiculo');
+    previewImage(inputPlaca, 'previewPlaca');
+</script>
+{% endblock %}
