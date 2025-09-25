@@ -3,6 +3,11 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django import forms
 from django.contrib import messages
+from django.contrib.auth.models import User
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from django.db import IntegrityError
 
 from .forms import RegistroUsuarioForm
 from .models import Perfil
@@ -89,3 +94,54 @@ def editar_perfil(request):
 def perfil(request):
     perfil = request.user.perfil
     return render(request, "usuarios/perfil.html", {"perfil": perfil})
+
+@api_view(['POST'])
+def registro_api(request):
+    try:
+        username = request.data.get('username')
+        email = request.data.get('email')
+        password = request.data.get('password')
+        
+        # Validaciones
+        if not username or not email or not password:
+            return Response(
+                {'detail': 'Todos los campos son requeridos'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Verificar si el usuario ya existe
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {'detail': 'Este nombre de usuario ya está en uso'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Verificar si el correo ya existe
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {'detail': 'Este correo electrónico ya está registrado'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Crear el usuario
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password
+        )
+        
+        return Response(
+            {'detail': 'Usuario registrado con éxito'}, 
+            status=status.HTTP_201_CREATED
+        )
+        
+    except IntegrityError as e:
+        return Response(
+            {'detail': 'Error de integridad en la base de datos: ' + str(e)},
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    except Exception as e:
+        return Response(
+            {'detail': 'Error al registrar: ' + str(e)},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
