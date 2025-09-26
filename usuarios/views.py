@@ -5,12 +5,14 @@ from django import forms
 from django.contrib import messages
 from django.contrib.auth.models import User
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
+from rest_framework.parsers import MultiPartParser, FormParser
 from django.db import IntegrityError
 
 from .forms import RegistroUsuarioForm
-from .models import Perfil
+from .models import Perfil, Rol
+from .serializers import RegistroSerializer
 from vehiculos.models import Vehiculo
 
 # Registro de usuario
@@ -96,52 +98,207 @@ def perfil(request):
     return render(request, "usuarios/perfil.html", {"perfil": perfil})
 
 @api_view(['POST'])
+@parser_classes([MultiPartParser, FormParser])
 def registro_api(request):
+    serializer = RegistroSerializer(data=request.data)
+    if serializer.is_valid():
+        user = serializer.save()
+        
+        # Generar tokens JWT
+        from rest_framework_simplejwt.tokens import RefreshToken
+        refresh = RefreshToken.for_user(user)
+        
+        return Response({
+            'detail': 'Usuario registrado con éxito',
+            'user': {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+            },
+            'refresh': str(refresh),
+            'access': str(refresh.access_token),
+        }, status=status.HTTP_201_CREATED)
+    else:
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def obtener_roles(request):
+    """Obtiene lista de roles disponibles para registro"""
+    from .models import Rol
+    
+    roles = Rol.objects.filter(is_active=True).values('id', 'nombre')
+    roles_formateados = []
+    
+    for rol in roles:
+        roles_formateados.append({
+            'id': rol['id'],
+            'nombre': rol['nombre'],
+            'display_name': dict(Rol.ROL_CHOICES).get(rol['nombre'], rol['nombre'])
+        })
+    
+    return Response(roles_formateados)
+
+
+@api_view(['GET'])
+def perfil_usuario(request):
+    """Obtiene perfil del usuario autenticado"""
+    if not request.user.is_authenticated:
+        return Response(
+            {'detail': 'No autenticado'}, 
+            status=status.HTTP_401_UNAUTHORIZED
+        )
+    
     try:
-        username = request.data.get('username')
-        email = request.data.get('email')
-        password = request.data.get('password')
-        
-        # Validaciones
-        if not username or not email or not password:
-            return Response(
-                {'detail': 'Todos los campos son requeridos'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        # Verificar si el usuario ya existe
-        if User.objects.filter(username=username).exists():
-            return Response(
-                {'detail': 'Este nombre de usuario ya está en uso'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-            
-        # Verificar si el correo ya existe
-        if User.objects.filter(email=email).exists():
-            return Response(
-                {'detail': 'Este correo electrónico ya está registrado'}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        # Crear el usuario
-        user = User.objects.create_user(
-            username=username,
-            email=email,
-            password=password
-        )
-        
+        perfil = request.user.perfil
+        return Response({
+            'user': {
+                'id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+            },
+            'perfil': {
+                'telefono': perfil.telefono,
+                'direccion': perfil.direccion,
+                'foto': perfil.foto.url if perfil.foto else None,
+                'rol': {
+                    'id': perfil.rol.id if perfil.rol else None,
+                    'nombre': perfil.rol.nombre if perfil.rol else None,
+                    'display_name': perfil.rol.get_nombre_display() if perfil.rol else None,
+                }
+            }
+        })
+    except Perfil.DoesNotExist:
         return Response(
-            {'detail': 'Usuario registrado con éxito'}, 
-            status=status.HTTP_201_CREATED
+            {'detail': 'Perfil no encontrado'}, 
+            status=status.HTTP_404_NOT_FOUND
         )
-        
-    except IntegrityError as e:
+
+
+@api_view(['GET'])
+def listar_usuarios(request):
+    """Lista todos los usuarios - solo para administradores"""
+    # Verificar permisos de administrador
+    if not hasattr(request.user, 'perfil') or not request.user.perfil.rol:
         return Response(
-            {'detail': 'Error de integridad en la base de datos: ' + str(e)},
+            {'error': 'No tienes permisos de administrador'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    if request.user.perfil.rol.nombre != 'administrador_general':
+        return Response(
+            {'error': 'Solo los administradores pueden ver la lista de usuarios'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    usuarios = User.objects.all().select_related('perfil', 'perfil__rol')
+    usuarios_data = []
+    
+    for user in usuarios:
+        try:
+            perfil = user.perfil
+            usuario_info = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'is_active': user.is_active,
+                'date_joined': user.date_joined,
+                'perfil': {
+                    'telefono': perfil.telefono,
+                    'direccion': perfil.direccion,
+                    'rol': {
+                        'id': perfil.rol.id if perfil.rol else None,
+                        'nombre': perfil.rol.nombre if perfil.rol else None,
+                        'display_name': perfil.rol.get_nombre_display() if perfil.rol else None,
+                    }
+                }
+            }
+            usuarios_data.append(usuario_info)
+        except Perfil.DoesNotExist:
+            # Usuario sin perfil
+            usuario_info = {
+                'id': user.id,
+                'username': user.username,
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name,
+                'is_active': user.is_active,
+                'date_joined': user.date_joined,
+                'perfil': None
+            }
+            usuarios_data.append(usuario_info)
+    
+    return Response(usuarios_data)
+
+
+@api_view(['POST'])
+def cambiar_rol_usuario(request):
+    """Cambia el rol de un usuario - solo para administradores"""
+    # Verificar permisos de administrador
+    if not hasattr(request.user, 'perfil') or not request.user.perfil.rol:
+        return Response(
+            {'error': 'No tienes permisos de administrador'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+    
+    if request.user.perfil.rol.nombre != 'administrador_general':
+        return Response(
+            {'error': 'Solo los administradores pueden cambiar roles'}, 
+            status=status.HTTP_403_FORBIDDEN
+        )
+
+    user_id = request.data.get('user_id')
+    nuevo_rol_id = request.data.get('rol_id')
+    
+    if not user_id or not nuevo_rol_id:
+        return Response(
+            {'error': 'Se requieren user_id y rol_id'}, 
             status=status.HTTP_400_BAD_REQUEST
+        )
+
+    try:
+        # Obtener usuario y rol
+        usuario = User.objects.get(id=user_id)
+        nuevo_rol = Rol.objects.get(id=nuevo_rol_id)
+        
+        # No permitir cambiar el rol del propio administrador
+        if usuario == request.user:
+            return Response(
+                {'error': 'No puedes cambiar tu propio rol'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Obtener o crear perfil
+        perfil, created = Perfil.objects.get_or_create(user=usuario)
+        rol_anterior = perfil.rol
+        
+        # Cambiar rol
+        perfil.rol = nuevo_rol
+        perfil.save()
+        
+        return Response({
+            'message': f'Rol cambiado exitosamente',
+            'usuario': usuario.username,
+            'rol_anterior': rol_anterior.get_nombre_display() if rol_anterior else 'Sin rol',
+            'rol_nuevo': nuevo_rol.get_nombre_display(),
+        })
+        
+    except User.DoesNotExist:
+        return Response(
+            {'error': 'Usuario no encontrado'}, 
+            status=status.HTTP_404_NOT_FOUND
+        )
+    except Rol.DoesNotExist:
+        return Response(
+            {'error': 'Rol no encontrado'}, 
+            status=status.HTTP_404_NOT_FOUND
         )
     except Exception as e:
         return Response(
-            {'detail': 'Error al registrar: ' + str(e)},
+            {'error': f'Error interno: {str(e)}'}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )

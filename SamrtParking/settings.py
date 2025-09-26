@@ -12,10 +12,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Cargar variables de entorno desde un archivo .env en la raíz del proyecto
+load_dotenv(dotenv_path=BASE_DIR / '.env')
 
 # Para archivos de usuario (imágenes, documentos subidos, etc.)
 MEDIA_URL = '/media/'
@@ -26,15 +30,15 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@d#n+=^2swnsa-)82ja5r1(2lnx$6!&wixlmozq2aba1l#56#2'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-@d#n+=^2swnsa-)82ja5r1(2lnx$6!&wixlmozq2aba1l#56#2')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() in ('1', 'true', 'yes')
 
-ALLOWED_HOSTS = []
-
-
-# Application definition
+# Valores por defecto para desarrollo. Si quieres sobreescribir desde .env,
+# deja la variable ALLOWED_HOSTS en .env con hosts separados por comas.
+DEFAULT_ALLOWED = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', ','.join(DEFAULT_ALLOWED)).split(',')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -93,21 +97,46 @@ WSGI_APPLICATION = 'SamrtParking.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'SmartParking',   #nombre de la base de datos
-        'USER': 'root',         
-        'PASSWORD': '',  #tu contraseña MySQL
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
-    }
+# Leer configuración de la base de datos desde variables de entorno.
+# DB_ENGINE puede ser una abreviatura: 'mysql', 'sqlite', 'postgresql' o el backend completo
+raw_engine = os.getenv('DB_ENGINE', '').strip().lower()
+
+# Mapear abreviaturas a backends de Django
+ENGINE_MAP = {
+    'mysql': 'django.db.backends.mysql',
+    'sqlite': 'django.db.backends.sqlite3',
+    'postgresql': 'django.db.backends.postgresql',
+    'postgres': 'django.db.backends.postgresql',
 }
 
-
-
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
+if raw_engine:
+    engine = ENGINE_MAP.get(raw_engine, raw_engine)
+    if engine == 'django.db.backends.sqlite3':
+        DATABASES = {
+            'default': {
+                'ENGINE': engine,
+                'NAME': os.getenv('DB_NAME', str(BASE_DIR / 'db.sqlite3')),
+            }
+        }
+    else:
+        DATABASES = {
+            'default': {
+                'ENGINE': engine,
+                'NAME': os.getenv('DB_NAME', 'SmartParking'),
+                'USER': os.getenv('DB_USER', 'root'),
+                'PASSWORD': os.getenv('DB_PASSWORD', ''),
+                'HOST': os.getenv('DB_HOST', '127.0.0.1'),
+                'PORT': os.getenv('DB_PORT', '3306'),
+            }
+        }
+else:
+    # Por defecto usamos SQLite local para desarrollo (archivo db.sqlite3)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': str(BASE_DIR / 'db.sqlite3'),
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = []
     # {
