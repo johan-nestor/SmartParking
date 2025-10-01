@@ -1,15 +1,17 @@
 """
-Servicio de detección de placas usando YOLO v12
-Requiere: pip install ultralytics opencv-python torch
+Servicio de detección de placas usando YOLO + EasyOCR
+Requiere: pip install ultralytics easyocr opencv-python torch
 """
 
 import cv2
 import numpy as np
 from ultralytics import YOLO
+import easyocr
 import re
 from pathlib import Path
 from django.conf import settings
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -20,21 +22,34 @@ class PlateDetectionService:
         Inicializa el servicio de detección de placas
         """
         self.model = None
-        self.confidence_threshold = 0.5
+        self.ocr_reader = None
+        self.confidence_threshold = 0.25
         self.initialize_model()
+        self.initialize_ocr()
     
     def initialize_model(self):
         """
         Inicializa el modelo YOLO para detección de placas
         """
         try:
-            # Usar modelo preentrenado de YOLO o entrenar uno específico para placas
-            # Por ahora usamos el modelo general, pero se puede entrenar uno específico
+            # Usar modelo YOLOv8 optimizado
             self.model = YOLO('yolov8n.pt')  # Modelo ligero para detección
             logger.info("Modelo YOLO inicializado correctamente")
         except Exception as e:
             logger.error(f"Error al inicializar modelo YOLO: {e}")
             raise
+    
+    def initialize_ocr(self):
+        """
+        Inicializa EasyOCR para reconocimiento de texto
+        """
+        try:
+            # Inicializar EasyOCR con idiomas español e inglés
+            self.ocr_reader = easyocr.Reader(['en', 'es'], gpu=False)  # gpu=True si tienes GPU
+            logger.info("EasyOCR inicializado correctamente")
+        except Exception as e:
+            logger.error(f"Error al inicializar EasyOCR: {e}")
+            self.ocr_reader = None
     
     def detect_license_plate(self, image_path_or_array, save_result=False):
         """
@@ -62,7 +77,7 @@ class PlateDetectionService:
             if image is None:
                 raise ValueError("No se pudo cargar la imagen")
             
-            # Ejecutar detección
+            # Ejecutar detección (buscar vehículos primero)
             results = self.model(image, conf=self.confidence_threshold)
             
             plates_info = {
@@ -77,21 +92,30 @@ class PlateDetectionService:
                 boxes = result.boxes
                 if boxes is not None:
                     for box in boxes:
-                        # Extraer región de la placa
-                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
-                        confidence = float(box.conf[0])
+                        class_id = int(box.cls[0]) if box.cls is not None else -1
                         
-                        if confidence >= self.confidence_threshold:
-                            # Extraer región de la placa
-                            plate_region = image[y1:y2, x1:x2]
+                        # Filtrar solo vehículos (car=2, truck=7, bus=5, motorcycle=3 en COCO)
+                        if class_id in [2, 3, 5, 7]:  # Solo vehículos
+                            x1, y1, x2, y2 = box.xyxy[0].cpu().numpy().astype(int)
+                            confidence = float(box.conf[0])
                             
-                            # Reconocer texto de la placa
-                            plate_text = self.extract_text_from_plate(plate_region)
-                            
-                            if plate_text:
-                                plates_info['plates_detected'].append(plate_text)
-                                plates_info['confidence_scores'].append(confidence)
-                                plates_info['bounding_boxes'].append((x1, y1, x2, y2))
+                            if confidence >= self.confidence_threshold:
+                                # Buscar placa en la región del vehículo
+                                vehicle_region = image[y1:y2, x1:x2]
+                                plate_results = self.find_license_plate_in_vehicle(vehicle_region)
+                                
+                                if plate_results:
+                                    for plate_info in plate_results:
+                                        # Ajustar coordenadas al frame completo
+                                        px1, py1, px2, py2 = plate_info['bbox']
+                                        global_x1 = x1 + px1
+                                        global_y1 = y1 + py1
+                                        global_x2 = x1 + px2
+                                        global_y2 = y1 + py2
+                                        
+                                        plates_info['plates_detected'].append(plate_info['text'])
+                                        plates_info['confidence_scores'].append(plate_info['confidence'])
+                                        plates_info['bounding_boxes'].append((global_x1, global_y1, global_x2, global_y2))
             
             # Dibujar detecciones si se solicita
             if save_result and plates_info['plates_detected']:
@@ -115,51 +139,99 @@ class PlateDetectionService:
                 'error': str(e)
             }
     
-    def extract_text_from_plate(self, plate_region):
+    def find_license_plate_in_vehicle(self, vehicle_region):
         """
-        Extrae texto de una región de placa usando OCR
+        Busca placas específicamente en la región de un vehículo
         
         Args:
-            plate_region: Región de la imagen con la placa
+            vehicle_region: Región de la imagen con el vehículo
             
         Returns:
-            str: Texto de la placa limpio
+            list: Lista de placas encontradas con sus datos
         """
         try:
-            # Preprocesamiento de la imagen
-            gray = cv2.cvtColor(plate_region, cv2.COLOR_BGR2GRAY)
+            plates_found = []
             
-            # Aplicar filtros para mejorar OCR
-            gray = cv2.GaussianBlur(gray, (5, 5), 0)
-            gray = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+            # Preprocesar imagen para mejorar detección
+            processed_region = self.preprocess_for_plate_detection(vehicle_region)
             
-            # Usar pytesseract para OCR (requiere instalación separada)
-            try:
-                import pytesseract
-                # Configuración específica para placas
-                config = '--oem 3 --psm 8 -c tessedit_char_whitelist=ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-                text = pytesseract.image_to_string(gray, config=config)
+            # Usar EasyOCR para encontrar texto
+            if self.ocr_reader is not None:
+                results = self.ocr_reader.readtext(processed_region)
                 
-                # Limpiar texto
-                text = re.sub(r'[^A-Z0-9]', '', text.upper())
-                
-                # Validar formato de placa (ajustar según país/región)
-                if self.validate_plate_format(text):
-                    return text
-                
-            except ImportError:
-                logger.warning("pytesseract no está instalado, usando reconocimiento básico")
-                # Fallback sin OCR externo
-                return self.basic_text_recognition(gray)
-                
+                for (bbox, text, confidence) in results:
+                    # Limpiar y validar texto
+                    clean_text = self.clean_plate_text(text)
+                    
+                    if self.validate_plate_format(clean_text) and confidence > 0.3:
+                        # Convertir bbox a formato estándar
+                        points = np.array(bbox)
+                        x1, y1 = np.min(points, axis=0).astype(int)
+                        x2, y2 = np.max(points, axis=0).astype(int)
+                        
+                        plates_found.append({
+                            'text': clean_text,
+                            'confidence': confidence,
+                            'bbox': (x1, y1, x2, y2)
+                        })
+            
+            return plates_found
+            
         except Exception as e:
-            logger.error(f"Error en extracción de texto: {e}")
+            logger.error(f"Error en búsqueda de placa en vehículo: {e}")
+            return []
+    
+    def preprocess_for_plate_detection(self, image):
+        """
+        Preprocesa imagen para mejorar detección de placas
+        """
+        try:
+            # Convertir a escala de grises
+            if len(image.shape) == 3:
+                gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            else:
+                gray = image
             
-        return None
+            # Aplicar filtros
+            gray = cv2.GaussianBlur(gray, (3, 3), 0)
+            
+            # Mejorar contraste
+            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            gray = clahe.apply(gray)
+            
+            return gray
+            
+        except Exception as e:
+            logger.error(f"Error en preprocesamiento: {e}")
+            return image
+    
+    def clean_plate_text(self, text):
+        """
+        Limpia el texto extraído de una placa
+        """
+        # Eliminar espacios y caracteres especiales
+        clean_text = re.sub(r'[^A-Z0-9]', '', text.upper())
+        
+        # Correcciones comunes OCR
+        corrections = {
+            '0': 'O',  # En contexto de letras
+            '1': 'I',  # En contexto de letras
+            '5': 'S',  # En contexto de letras
+        }
+        
+        # Aplicar correcciones contextuales
+        if len(clean_text) >= 6:
+            # Primeras 3 posiciones suelen ser letras
+            for i in range(min(3, len(clean_text))):
+                if clean_text[i] in corrections:
+                    clean_text = clean_text[:i] + corrections[clean_text[i]] + clean_text[i+1:]
+        
+        return clean_text
     
     def validate_plate_format(self, text):
         """
         Valida si el texto extraído tiene formato de placa válido
+        Incluye formatos de diferentes países latinoamericanos
         
         Args:
             text: Texto a validar
@@ -170,12 +242,29 @@ class PlateDetectionService:
         if not text or len(text) < 5 or len(text) > 8:
             return False
         
-        # Patrones comunes de placas (ajustar según región)
+        # Patrones comunes de placas (diferentes países)
         patterns = [
+            # Formato argentino/chileno
             r'^[A-Z]{3}[0-9]{3}$',     # ABC123
+            r'^[A-Z]{2}[0-9]{3}[A-Z]{2}$',  # AB123CD
+            
+            # Formato mexicano
             r'^[A-Z]{3}[0-9]{4}$',     # ABC1234
-            r'^[A-Z]{2}[0-9]{4}$',     # AB1234
             r'^[0-9]{3}[A-Z]{3}$',     # 123ABC
+            
+            # Formato colombiano
+            r'^[A-Z]{3}[0-9]{2}[A-Z]$',   # ABC12D
+            
+            # Formato peruano
+            r'^[A-Z]{2}[0-9]{4}$',     # AB1234
+            r'^[0-9]{4}[A-Z]{2}$',     # 1234AB
+            
+            # Formato brasileiro
+            r'^[A-Z]{3}[0-9]{4}$',     # ABC1234
+            r'^[A-Z]{3}[0-9][A-Z][0-9]{2}$', # Mercosul ABC1D23
+            
+            # Formato general
+            r'^[A-Z0-9]{6,8}$',       # Cualquier combinación de 6-8 caracteres
         ]
         
         return any(re.match(pattern, text) for pattern in patterns)
@@ -220,6 +309,8 @@ class PlateDetectionService:
 class CameraManager:
     """
     Gestor de cámara para captura en tiempo real
+    NOTA: Para uso web, la cámara se maneja desde JavaScript/WebRTC
+    Esta clase es para procesamiento del lado del servidor
     """
     
     def __init__(self, camera_index=0):
@@ -228,18 +319,33 @@ class CameraManager:
         self.plate_detector = PlateDetectionService()
     
     def initialize_camera(self):
-        """Inicializa la cámara"""
+        """Inicializa la cámara del sistema (no navegador)"""
         try:
-            self.cap = cv2.VideoCapture(self.camera_index)
-            if not self.cap.isOpened():
-                raise ValueError(f"No se pudo abrir la cámara {self.camera_index}")
+            # Intentar diferentes backends de OpenCV
+            backends = [cv2.CAP_DSHOW, cv2.CAP_MSMF, cv2.CAP_ANY]
             
-            # Configurar resolución
-            self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-            self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+            for backend in backends:
+                try:
+                    self.cap = cv2.VideoCapture(self.camera_index, backend)
+                    if self.cap.isOpened():
+                        # Configurar propiedades
+                        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+                        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+                        self.cap.set(cv2.CAP_PROP_FPS, 30)
+                        
+                        # Probar captura
+                        ret, frame = self.cap.read()
+                        if ret and frame is not None:
+                            logger.info(f"Cámara inicializada con backend {backend}")
+                            return True
+                        else:
+                            self.cap.release()
+                except Exception as e:
+                    if self.cap:
+                        self.cap.release()
+                    continue
             
-            logger.info("Cámara inicializada correctamente")
-            return True
+            raise ValueError("No se pudo inicializar ninguna cámara")
             
         except Exception as e:
             logger.error(f"Error al inicializar cámara: {e}")
@@ -262,6 +368,43 @@ class CameraManager:
         if frame is not None:
             return self.plate_detector.process_camera_frame(frame)
         return None
+    
+    def detect_from_camera(self):
+        """
+        Método para detección desde cámara del sistema
+        Para cámara web usar detect_plate_from_upload con imagen del navegador
+        """
+        try:
+            if not self.cap or not self.cap.isOpened():
+                if not self.initialize_camera():
+                    return {
+                        'success': False,
+                        'error': 'No se pudo acceder a la cámara del sistema',
+                        'plates_detected': []
+                    }
+            
+            frame = self.capture_frame()
+            if frame is not None:
+                result = self.plate_detector.detect_license_plate(frame)
+                return {
+                    'success': True,
+                    'plates_detected': result['plates_detected'],
+                    'confidence_scores': result['confidence_scores']
+                }
+            else:
+                return {
+                    'success': False,
+                    'error': 'No se pudo capturar imagen de la cámara',
+                    'plates_detected': []
+                }
+                
+        except Exception as e:
+            logger.error(f"Error en detección desde cámara: {e}")
+            return {
+                'success': False,
+                'error': str(e),
+                'plates_detected': []
+            }
     
     def release(self):
         """Libera recursos de la cámara"""

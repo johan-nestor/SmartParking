@@ -1,31 +1,63 @@
-{% extends "base.html" %}
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-6">
-        <div class="card shadow">
-            <div class="card-body">
-                <h2 class="mb-4 text-center">Iniciar Sesión</h2>
+{% extends "base_tailwind.html" %}
 
+{% block content %}
+<div class="min-h-screen bg-gradient-to-r from-purple-100 via-emerald-50 to-sky-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <div class="mx-auto h-12 w-12 rounded-full bg-emerald-600 flex items-center justify-center">
+                <span class="text-white font-bold text-lg">S</span>
+            </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Iniciar sesión
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                O
+                <a href="{% url 'registro' %}" class="font-medium text-emerald-600 hover:text-emerald-500">
+                    crea una cuenta nueva
+                </a>
+            </p>
+        </div>
+
+        <div class="bg-white shadow-xl rounded-lg p-8">
+            <form method="POST" class="space-y-6">
+                {% csrf_token %}
+                
                 {% if error %}
-                    <div class="alert alert-danger">{{ error }}</div>
+                <div class="rounded-md bg-red-50 p-4">
+                    <div class="text-sm text-red-700">
+                        {{ error }}
+                    </div>
+                </div>
                 {% endif %}
 
-                <form method="POST">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <label class="form-label">Usuario</label>
-                        <input type="text" name="username" class="form-control" required>
+                <div class="space-y-4">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700">Usuario</label>
+                        <input type="text" id="username" name="username" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                               placeholder="Ingresa tu usuario">
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Contraseña</label>
-                        <input type="password" name="password" class="form-control" required>
+
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                        <input type="password" id="password" name="password" required 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                               placeholder="Ingresa tu contraseña">
                     </div>
-                    <button type="submit" class="btn btn-primary w-100">Ingresar</button>
-                </form>
-                <p class="text-center mt-3">
-                    ¿No tienes cuenta? <a href="{% url 'registro' %}">Regístrate aquí</a>
-                </p>
-            </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                        Entrar
+                    </button>
+                </div>
+
+                <div class="text-center">
+                    <a href="/" class="text-sm text-gray-600 hover:text-gray-500">
+                        ← Volver al inicio
+                    </a>
+                </div>
+            </form>
         </div>
     </div>
 </div>

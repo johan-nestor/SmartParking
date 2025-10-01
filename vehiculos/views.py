@@ -4,6 +4,9 @@ from django.contrib import messages
 from .models import Vehiculo
 from .forms import VehiculoForm
 
+# Importar decorador de roles desde usuarios
+from usuarios.views import role_required
+
 # Importaciones para API REST
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view, action, parser_classes
@@ -249,7 +252,7 @@ def registrar_acceso_automatico(request):
 @api_view(['POST'])
 def detectar_placa_camara(request):
     """
-    Detecta placa desde cámara en tiempo real
+    Detecta placa desde imagen capturada por cámara web
     Solo para vigilantes
     """
     # Verificar permisos de vigilante
@@ -266,24 +269,38 @@ def detectar_placa_camara(request):
         )
 
     try:
-        camera = CameraManager()
-        result = camera.detect_plates_in_frame()
-        camera.release()
-        
-        if result:
-            return Response(result)
-        else:
+        # Verificar que se envió una imagen
+        if 'image' not in request.FILES:
             return Response(
-                {'error': 'No se pudo capturar frame de la cámara'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {'error': 'Se requiere una imagen capturada de la cámara'}, 
+                status=status.HTTP_400_BAD_REQUEST
             )
+        
+        # Procesar imagen usando la nueva librería
+        result = detect_plate_from_upload(request.FILES['image'])
+        
+        if result.get('error'):
+            return Response({
+                'success': False,
+                'error': result['error'],
+                'plates_detected': []
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        # Formatear respuesta para el frontend
+        return Response({
+            'success': True,
+            'plates_detected': result.get('plates_detected', []),
+            'confidence_scores': result.get('confidence_scores', []),
+            'message': f"Se detectaron {len(result.get('plates_detected', []))} placa(s)" if result.get('plates_detected') else "No se detectaron placas"
+        })
             
     except Exception as e:
         logger.error(f"Error en detección por cámara: {e}")
-        return Response(
-            {'error': str(e)}, 
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR
-        )
+        return Response({
+            'success': False,
+            'error': str(e),
+            'plates_detected': []
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 @api_view(['GET'])
@@ -653,3 +670,60 @@ def vigilante_buscar_vehiculo(request):
     except Exception as e:
         logger.error(f"Error al buscar vehículo: {str(e)}")
         return JsonResponse({'error': f'Error interno: {str(e)}'}, status=500)
+
+
+# =============== VISTAS HTML PARA VIGILANTES ===============
+
+@role_required('vigilante')
+def dashboard_vigilante(request):
+    """
+    Dashboard principal para vigilantes con estadísticas en tiempo real
+    """
+    return render(request, 'vehiculos/dashboard_vigilante.html', {
+        'usuario': request.user,
+        'titulo': 'Dashboard Vigilante'
+    })
+
+
+@role_required('vigilante') 
+def camara_vigilante(request):
+    """
+    Vista de cámara para detección de placas en tiempo real
+    """
+    return render(request, 'vehiculos/camara_vigilante.html', {
+        'usuario': request.user,
+        'titulo': 'Detección de Placas'
+    })
+
+
+@role_required('vigilante')
+def registro_acceso_vigilante(request):
+    """
+    Vista para registrar accesos de vehículos
+    """
+    return render(request, 'vehiculos/registro_acceso.html', {
+        'usuario': request.user,
+        'titulo': 'Registrar Acceso'
+    })
+
+
+@role_required('vigilante')
+def buscar_vehiculo_vigilante(request):
+    """
+    Vista para buscar información de vehículos por placa
+    """
+    return render(request, 'vehiculos/buscar_vehiculo.html', {
+        'usuario': request.user,
+        'titulo': 'Buscar Vehículo'
+    })
+
+
+@role_required('vigilante')
+def vehiculos_cochera_vigilante(request):
+    """
+    Vista para mostrar vehículos actualmente en la cochera
+    """
+    return render(request, 'vehiculos/vehiculos_cochera.html', {
+        'usuario': request.user,
+        'titulo': 'Vehículos en Cochera'
+    })

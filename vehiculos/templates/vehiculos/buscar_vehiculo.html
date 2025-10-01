@@ -1,0 +1,650 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Buscar Vehículo - Smart Parking{% endblock %}
+
+{% block extra_css %}
+<style>
+    .search-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        color: white;
+        padding: 30px;
+    }
+    .search-input {
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        border-radius: 10px;
+        padding: 15px 20px;
+        font-size: 18px;
+        font-weight: bold;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        text-align: center;
+    }
+    .search-input:focus {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    }
+    .btn-search {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 15px 30px;
+        font-size: 16px;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    .btn-search:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+    .vehicle-card {
+        background: rgba(255, 255, 255, 0.95);
+        border-radius: 15px;
+        padding: 25px;
+        color: #333;
+        margin-top: 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    }
+    .vehicle-found {
+        border-left: 5px solid #28a745;
+    }
+    .vehicle-not-found {
+        border-left: 5px solid #dc3545;
+        text-align: center;
+    }
+    .info-section {
+        background: rgba(102, 126, 234, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        margin-bottom: 15px;
+    }
+    .status-badge {
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        display: inline-block;
+    }
+    .status-en-cochera {
+        background: #28a745;
+        color: white;
+    }
+    .status-fuera {
+        background: #6c757d;
+        color: white;
+    }
+    .status-prestamo {
+        background: #ffc107;
+        color: #000;
+    }
+    .quick-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .btn-action {
+        flex: 1;
+        min-width: 120px;
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: none;
+        font-size: 14px;
+        transition: all 0.3s ease;
+    }
+    .search-history {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+    .history-item {
+        padding: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+        transition: background 0.3s ease;
+    }
+    .history-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 5px;
+    }
+    .history-item:last-child {
+        border-bottom: none;
+    }
+    .suggestions {
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 8px;
+        margin-top: 5px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        display: none;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+    .suggestion-item {
+        padding: 12px 15px;
+        cursor: pointer;
+        border-bottom: 1px solid #eee;
+        color: #333;
+    }
+    .suggestion-item:hover {
+        background: #f8f9fa;
+    }
+    .suggestion-item:last-child {
+        border-bottom: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">🔍 Buscar Vehículo</h1>
+                    <p class="text-muted mb-0">Consulta información por placa</p>
+                </div>
+                <div>
+                    <a href="{% url 'dashboard_vigilante' %}" class="btn btn-secondary me-2">
+                        <i class="fas fa-arrow-left"></i> Dashboard
+                    </a>
+                    <a href="{% url 'camara_vigilante' %}" class="btn btn-primary">
+                        <i class="fas fa-camera"></i> Detectar Placa
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Formulario de búsqueda -->
+            <div class="search-container">
+                <h4 class="text-center mb-4">
+                    <i class="fas fa-search"></i> Ingresa la Placa del Vehículo
+                </h4>
+
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <div class="position-relative">
+                            <input type="text" 
+                                   class="form-control search-input" 
+                                   id="placa-search"
+                                   placeholder="ABC-123"
+                                   maxlength="8"
+                                   autocomplete="off">
+                            
+                            <!-- Sugerencias -->
+                            <div class="suggestions" id="suggestions">
+                                <!-- Se llena dinámicamente -->
+                            </div>
+                        </div>
+                        <div class="form-text text-white-50 mt-2">
+                            <i class="fas fa-info-circle"></i> 
+                            Ingresa al menos 3 caracteres para buscar
+                        </div>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button type="button" class="btn btn-search w-100" id="btn-buscar">
+                            <i class="fas fa-search"></i> Buscar
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Búsquedas rápidas -->
+                <div class="text-center mt-3">
+                    <h6>Búsquedas Rápidas:</h6>
+                    <div class="d-flex flex-wrap justify-content-center gap-2 mt-2">
+                        <button class="btn btn-outline-light btn-sm quick-search" data-action="en-cochera">
+                            <i class="fas fa-car"></i> En Cochera
+                        </button>
+                        <button class="btn btn-outline-light btn-sm quick-search" data-action="prestamos-activos">
+                            <i class="fas fa-handshake"></i> Préstamos Activos
+                        </button>
+                        <button class="btn btn-outline-light btn-sm quick-search" data-action="ultimos-accesos">
+                            <i class="fas fa-clock"></i> Últimos Accesos
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Historial de búsquedas -->
+                <div class="search-history" id="search-history" style="display: none;">
+                    <h6><i class="fas fa-history"></i> Búsquedas Recientes</h6>
+                    <div id="history-container">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resultados de búsqueda -->
+            <div id="search-results">
+                <!-- Los resultados aparecerán aquí -->
+            </div>
+        </div>
+
+        <!-- Columna lateral -->
+        <div class="col-md-4">
+            <!-- Estadísticas rápidas -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">📊 Resumen del Día</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <div class="h5 text-success mb-1" id="total-entradas">--</div>
+                            <small class="text-muted">Entradas</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h5 text-danger mb-1" id="total-salidas">--</div>
+                            <small class="text-muted">Salidas</small>
+                        </div>
+                        <div class="col-4">
+                            <div class="h5 text-primary mb-1" id="total-cochera">--</div>
+                            <small class="text-muted">En cochera</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ayuda -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">💡 Ayuda</h6>
+                </div>
+                <div class="card-body">
+                    <h6 class="text-primary">Formatos de placa válidos:</h6>
+                    <ul class="list-unstyled mb-3">
+                        <li><code>ABC-123</code> - Formato estándar</li>
+                        <li><code>ABC123</code> - Sin guión</li>
+                        <li><code>A1B2C3</code> - Alfanumérico</li>
+                    </ul>
+                    
+                    <h6 class="text-info">Funciones disponibles:</h6>
+                    <ul class="list-unstyled mb-0 small">
+                        <li><i class="fas fa-check text-success me-1"></i> Ver información del vehículo</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Estado actual (en cochera/fuera)</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Historial de accesos</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Información de préstamos</li>
+                        <li><i class="fas fa-check text-success me-1"></i> Registrar nuevo acceso</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Atajos de teclado -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">⌨️ Atajos</h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        <p class="mb-2"><kbd>Enter</kbd> - Buscar vehículo</p>
+                        <p class="mb-2"><kbd>Esc</kbd> - Limpiar búsqueda</p>
+                        <p class="mb-0"><kbd>F1</kbd> - Ir a cámara</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let searchHistory = JSON.parse(localStorage.getItem('search_history') || '[]');
+
+    // Cargar estadísticas iniciales
+    cargarEstadisticas();
+    actualizarHistorial();
+
+    // Búsqueda al escribir
+    $('#placa-search').on('input', function() {
+        let placa = $(this).val().toUpperCase().replace(/[^A-Z0-9-]/g, '');
+        $(this).val(placa);
+        
+        if (placa.length >= 3) {
+            mostrarSugerencias(placa);
+        } else {
+            $('#suggestions').hide();
+        }
+    });
+
+    // Búsqueda con Enter
+    $('#placa-search').on('keypress', function(e) {
+        if (e.which === 13) {
+            buscarVehiculo();
+        }
+    });
+
+    // Búsqueda con botón
+    $('#btn-buscar').click(function() {
+        buscarVehiculo();
+    });
+
+    // Atajos de teclado
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape') {
+            limpiarBusqueda();
+        } else if (e.key === 'F1') {
+            e.preventDefault();
+            window.location.href = '{% url "camara_vigilante" %}';
+        }
+    });
+
+    // Búsquedas rápidas
+    $('.quick-search').click(function() {
+        const action = $(this).data('action');
+        ejecutarBusquedaRapida(action);
+    });
+
+    function buscarVehiculo() {
+        const placa = $('#placa-search').val().trim();
+        
+        if (!placa) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Campo vacío',
+                text: 'Por favor ingresa una placa para buscar'
+            });
+            return;
+        }
+
+        if (placa.length < 3) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Placa muy corta',
+                text: 'Ingresa al menos 3 caracteres'
+            });
+            return;
+        }
+
+        $('#btn-buscar').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Buscando...');
+
+        $.ajax({
+            url: '{% url "vigilante_buscar_vehiculo" %}',
+            type: 'GET',
+            data: { placa: placa },
+            success: function(response) {
+                mostrarResultados(response);
+                agregarAHistorial(placa);
+            },
+            error: function(xhr) {
+                console.error('Error en búsqueda:', xhr.responseText);
+                mostrarError('Error de comunicación con el servidor');
+            },
+            complete: function() {
+                $('#btn-buscar').prop('disabled', false).html('<i class="fas fa-search"></i> Buscar');
+            }
+        });
+    }
+
+    function mostrarResultados(data) {
+        let html = '';
+
+        if (data.encontrado) {
+            const vehiculo = data.vehiculo;
+            const prestamo = data.prestamo_activo;
+            const ultimoAcceso = data.ultimo_acceso;
+            const enCochera = data.esta_en_cochera;
+
+            html = `
+                <div class="vehicle-card vehicle-found">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-section">
+                                <h5><i class="fas fa-car text-primary"></i> Información del Vehículo</h5>
+                                <p class="mb-2"><strong>Placa:</strong> <span class="badge bg-primary">${vehiculo.placa}</span></p>
+                                <p class="mb-2"><strong>Marca:</strong> ${vehiculo.marca}</p>
+                                <p class="mb-2"><strong>Modelo:</strong> ${vehiculo.modelo}</p>
+                                <p class="mb-2"><strong>Color:</strong> ${vehiculo.color}</p>
+                                <p class="mb-0"><strong>Propietario:</strong> ${vehiculo.propietario}</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="info-section">
+                                <h5><i class="fas fa-info-circle text-info"></i> Estado Actual</h5>
+                                <div class="mb-3">
+                                    <span class="status-badge ${enCochera ? 'status-en-cochera' : 'status-fuera'}">
+                                        <i class="fas ${enCochera ? 'fa-car' : 'fa-parking'}"></i>
+                                        ${enCochera ? 'EN COCHERA' : 'FUERA DE COCHERA'}
+                                    </span>
+            `;
+
+            if (prestamo) {
+                html += `
+                    <span class="status-badge status-prestamo ms-2">
+                        <i class="fas fa-handshake"></i> PRÉSTAMO ACTIVO
+                    </span>
+                `;
+            }
+
+            html += '</div>';
+
+            if (prestamo) {
+                html += `
+                    <h6><i class="fas fa-user-friends text-warning"></i> Información del Préstamo</h6>
+                    <p class="mb-1"><strong>Usuario autorizado:</strong> ${prestamo.usuario_autorizado}</p>
+                    <p class="mb-1"><strong>Período:</strong> ${prestamo.fecha_inicio} al ${prestamo.fecha_fin}</p>
+                    <p class="mb-0"><strong>Motivo:</strong> ${prestamo.motivo}</p>
+                `;
+            }
+
+            html += '</div></div>';
+
+            if (ultimoAcceso) {
+                const fecha = new Date(ultimoAcceso.timestamp);
+                const tipoClass = ultimoAcceso.tipo === 'entrada' ? 'success' : 'danger';
+                const icono = ultimoAcceso.tipo === 'entrada' ? 'fa-arrow-right' : 'fa-arrow-left';
+
+                html += `
+                    <div class="col-12">
+                        <div class="info-section">
+                            <h5><i class="fas fa-history text-secondary"></i> Último Acceso</h5>
+                            <div class="row align-items-center">
+                                <div class="col-md-4">
+                                    <span class="status-badge status-${ultimoAcceso.tipo === 'entrada' ? 'en-cochera' : 'fuera'}">
+                                        <i class="fas ${icono}"></i> ${ultimoAcceso.tipo.toUpperCase()}
+                                    </span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>${fecha.toLocaleDateString()}</strong><br>
+                                    <small>${fecha.toLocaleTimeString()}</small>
+                                </div>
+                                <div class="col-md-4">
+                                    <small>Vigilante: ${ultimoAcceso.vigilante}</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `
+                </div>
+                <hr>
+                <div class="quick-actions">
+                    <button class="btn btn-success btn-action" onclick="registrarAccesoRapido('${vehiculo.placa}', 'entrada')">
+                        <i class="fas fa-arrow-right"></i> Registrar Entrada
+                    </button>
+                    <button class="btn btn-danger btn-action" onclick="registrarAccesoRapido('${vehiculo.placa}', 'salida')">
+                        <i class="fas fa-arrow-left"></i> Registrar Salida
+                    </button>
+                    <button class="btn btn-info btn-action" onclick="verHistorialCompleto('${vehiculo.placa}')">
+                        <i class="fas fa-history"></i> Ver Historial
+                    </button>
+                    <button class="btn btn-primary btn-action" onclick="editarVehiculo(${vehiculo.id})">
+                        <i class="fas fa-edit"></i> Ver Detalles
+                    </button>
+                </div>
+            </div>
+            `;
+
+        } else {
+            html = `
+                <div class="vehicle-card vehicle-not-found">
+                    <i class="fas fa-exclamation-triangle fa-4x text-warning mb-4"></i>
+                    <h4>Vehículo No Encontrado</h4>
+                    <p class="mb-4">La placa <strong>${$('#placa-search').val()}</strong> no está registrada en el sistema.</p>
+                    <div class="quick-actions justify-content-center">
+                        <button class="btn btn-primary btn-action" onclick="contactarAdmin()">
+                            <i class="fas fa-user-shield"></i> Contactar Admin
+                        </button>
+                        <button class="btn btn-secondary btn-action" onclick="nuevaBusqueda()">
+                            <i class="fas fa-search"></i> Nueva Búsqueda
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        $('#search-results').html(html);
+    }
+
+    function mostrarError(mensaje) {
+        const html = `
+            <div class="vehicle-card vehicle-not-found">
+                <i class="fas fa-exclamation-circle fa-4x text-danger mb-4"></i>
+                <h4>Error en la Búsqueda</h4>
+                <p class="mb-4">${mensaje}</p>
+                <button class="btn btn-primary" onclick="nuevaBusqueda()">
+                    <i class="fas fa-redo"></i> Intentar de Nuevo
+                </button>
+            </div>
+        `;
+        $('#search-results').html(html);
+    }
+
+    function mostrarSugerencias(placa) {
+        // Aquí podrías implementar sugerencias basadas en historial o placas existentes
+        // Por ahora solo mostramos el historial filtrado
+        const sugerencias = searchHistory.filter(item => 
+            item.placa.includes(placa)
+        ).slice(0, 5);
+
+        if (sugerencias.length > 0) {
+            let html = '';
+            sugerencias.forEach(item => {
+                html += `
+                    <div class="suggestion-item" onclick="seleccionarSugerencia('${item.placa}')">
+                        <strong>${item.placa}</strong>
+                        <small class="text-muted ms-2">${new Date(item.fecha).toLocaleDateString()}</small>
+                    </div>
+                `;
+            });
+            $('#suggestions').html(html).show();
+        } else {
+            $('#suggestions').hide();
+        }
+    }
+
+    function agregarAHistorial(placa) {
+        // Eliminar si ya existe
+        searchHistory = searchHistory.filter(item => item.placa !== placa);
+        
+        // Agregar al inicio
+        searchHistory.unshift({
+            placa: placa,
+            fecha: new Date().toISOString()
+        });
+
+        // Mantener solo las últimas 10
+        searchHistory = searchHistory.slice(0, 10);
+
+        // Guardar en localStorage
+        localStorage.setItem('search_history', JSON.stringify(searchHistory));
+        
+        actualizarHistorial();
+    }
+
+    function actualizarHistorial() {
+        if (searchHistory.length > 0) {
+            let html = '';
+            searchHistory.forEach(item => {
+                html += `
+                    <div class="history-item" onclick="seleccionarSugerencia('${item.placa}')">
+                        <strong>${item.placa}</strong>
+                        <small class="text-muted d-block">${new Date(item.fecha).toLocaleDateString()}</small>
+                    </div>
+                `;
+            });
+            $('#history-container').html(html);
+            $('#search-history').show();
+        } else {
+            $('#search-history').hide();
+        }
+    }
+
+    function cargarEstadisticas() {
+        $.ajax({
+            url: '{% url "vigilante_estadisticas" %}',
+            type: 'GET',
+            success: function(data) {
+                $('#total-entradas').text(data.entradas_hoy || 0);
+                $('#total-salidas').text(data.salidas_hoy || 0);
+                $('#total-cochera').text(data.vehiculos_en_cochera || 0);
+            }
+        });
+    }
+
+    function ejecutarBusquedaRapida(action) {
+        // Implementar búsquedas rápidas específicas
+        switch(action) {
+            case 'en-cochera':
+                window.location.href = '{% url "vehiculos_cochera_vigilante" %}';
+                break;
+            case 'prestamos-activos':
+                // Implementar vista de préstamos activos
+                Swal.fire('Info', 'Función en desarrollo', 'info');
+                break;
+            case 'ultimos-accesos':
+                // Implementar vista de últimos accesos
+                Swal.fire('Info', 'Función en desarrollo', 'info');
+                break;
+        }
+    }
+
+    // Funciones globales
+    window.seleccionarSugerencia = function(placa) {
+        $('#placa-search').val(placa);
+        $('#suggestions').hide();
+        buscarVehiculo();
+    };
+
+    window.limpiarBusqueda = function() {
+        $('#placa-search').val('');
+        $('#search-results').empty();
+        $('#suggestions').hide();
+    };
+
+    window.nuevaBusqueda = function() {
+        limpiarBusqueda();
+        $('#placa-search').focus();
+    };
+
+    window.registrarAccesoRapido = function(placa, tipo) {
+        localStorage.setItem('placa_detectada', placa);
+        localStorage.setItem('tipo_acceso_sugerido', tipo);
+        window.location.href = '{% url "registro_acceso_vigilante" %}';
+    };
+
+    window.verHistorialCompleto = function(placa) {
+        Swal.fire('Info', `Ver historial completo de ${placa}`, 'info');
+    };
+
+    window.editarVehiculo = function(id) {
+        Swal.fire('Info', `Ver detalles del vehículo ID: ${id}`, 'info');
+    };
+
+    window.contactarAdmin = function() {
+        Swal.fire('Info', 'Función para contactar administrador', 'info');
+    };
+
+    // Focus inicial
+    $('#placa-search').focus();
+});
+</script>
+{% endblock %}

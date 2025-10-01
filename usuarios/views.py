@@ -9,11 +9,48 @@ from rest_framework.decorators import api_view, parser_classes
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.db import IntegrityError
+from functools import wraps
 
 from .forms import RegistroUsuarioForm
 from .models import Perfil, Rol
 from .serializers import RegistroSerializer
 from vehiculos.models import Vehiculo
+
+# Decorador para verificar roles
+def role_required(allowed_roles):
+    """
+    Decorador que verifica si el usuario tiene uno de los roles permitidos
+    allowed_roles puede ser una cadena o una lista de roles
+    """
+    if isinstance(allowed_roles, str):
+        allowed_roles = [allowed_roles]
+    
+    def decorator(view_func):
+        @wraps(view_func)
+        def _wrapped_view(request, *args, **kwargs):
+            if not request.user.is_authenticated:
+                return redirect('login')
+            
+            # Verificar si el usuario tiene perfil y rol
+            if not hasattr(request.user, 'perfil') or not request.user.perfil.rol:
+                messages.error(request, "Tu cuenta no tiene un rol asignado. Contacta al administrador.")
+                return redirect('perfil')
+            
+            user_role = request.user.perfil.rol.nombre
+            if user_role not in allowed_roles:
+                messages.error(request, f"No tienes permisos para acceder a esta sección. Rol requerido: {', '.join(allowed_roles)}")
+                return redirect('dashboard')
+            
+            return view_func(request, *args, **kwargs)
+        return _wrapped_view
+    return decorator
+
+# Landing page
+def landing_page(request):
+    # Si el usuario ya está autenticado, redirigir al dashboard
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+    return render(request, 'landing.html')
 
 # Registro de usuario
 def registro(request):
@@ -58,11 +95,26 @@ def logout_view(request):
 @login_required(login_url="login")
 def dashboard(request):
     """
-    Muestra el dashboard principal con resumen del usuario y enlace a la gestión de vehículos.
+    Redirige a los usuarios según su rol o muestra dashboard general
     """
+    # Verificar si el usuario tiene perfil y rol
+    if hasattr(request.user, 'perfil') and request.user.perfil.rol:
+        rol = request.user.perfil.rol.nombre
+        
+        # Redirigir vigilantes a su dashboard específico
+        if rol == 'vigilante':
+            return redirect('dashboard_vigilante')
+        
+        # Redirigir administradores a su dashboard (si existe)
+        elif rol == 'administrador_general':
+            # Por ahora redirigir al dashboard normal, pero se puede crear uno específico
+            pass
+    
+    # Dashboard para usuarios normales o sin rol específico
     vehiculos = request.user.vehiculos.all()  # Vehículos del usuario logueado
     return render(request, "usuarios/dashboard.html", {
-        "vehiculos": vehiculos
+        "vehiculos": vehiculos,
+        "user_role": request.user.perfil.rol.nombre if hasattr(request.user, 'perfil') and request.user.perfil.rol else None
     })
 
 # Formulario para editar perfil

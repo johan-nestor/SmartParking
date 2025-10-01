@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SmartParking - Cochera Inteligente UDH{% endblock %}</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primario': '#059669',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        :root {
+            --color-primario-solid: #059669;
+            --color-primario: var(--color-primario-solid);
+        }
+        .btn-primary {
+            background-color: var(--color-primario-solid);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            border: none;
+            cursor: pointer;
+            display: inline-block;
+            text-decoration: none;
+        }
+        .btn-primary:hover {
+            filter: brightness(0.9);
+            color: white;
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    {% block navbar %}
+    <!-- Navbar opcional -->
+    {% if user.is_authenticated %}
+    <nav class="bg-white shadow-sm">
+        <div class="max-w-6xl mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="font-semibold text-lg">SmartParking UDH</div>
+            <div class="flex items-center gap-4">
+                <span class="text-sm text-gray-600">{{ user.username }}</span>
+                <a href="{% url 'logout' %}" class="text-sm text-red-600 hover:text-red-800">Salir</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+    {% endblock %}
+
+    <!-- Contenido principal -->
+    {% block content %}
+    {% endblock %}
+
+    {% block scripts %}
+    {% endblock %}
+</body>
+</html>

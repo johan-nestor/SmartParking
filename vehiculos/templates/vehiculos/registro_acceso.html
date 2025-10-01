@@ -1,0 +1,527 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Registrar Acceso - Smart Parking{% endblock %}
+
+{% block extra_css %}
+<style>
+    .registro-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        color: white;
+        padding: 30px;
+    }
+    .form-group {
+        margin-bottom: 20px;
+    }
+    .form-control, .form-select {
+        background: rgba(255, 255, 255, 0.9);
+        border: none;
+        border-radius: 8px;
+        padding: 12px 15px;
+        font-size: 16px;
+    }
+    .form-control:focus, .form-select:focus {
+        background: rgba(255, 255, 255, 1);
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+    }
+    .btn-registro {
+        background: linear-gradient(45deg, #28a745, #20c997);
+        border: none;
+        color: white;
+        padding: 15px 30px;
+        font-size: 18px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    .btn-registro:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
+        color: white;
+    }
+    .placa-input {
+        font-size: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+        text-align: center;
+        letter-spacing: 2px;
+    }
+    .vehiculo-info {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 20px;
+        margin: 20px 0;
+        display: none;
+    }
+    .vehiculo-found {
+        border-left: 5px solid #28a745;
+    }
+    .vehiculo-not-found {
+        border-left: 5px solid #dc3545;
+    }
+    .badge-custom {
+        padding: 8px 12px;
+        border-radius: 20px;
+        font-size: 12px;
+    }
+    .badge-entrada {
+        background: #28a745;
+    }
+    .badge-salida {
+        background: #dc3545;
+    }
+    .last-access {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 15px;
+    }
+    .detection-badge {
+        background: rgba(52, 144, 220, 0.2);
+        border: 2px solid #3490dc;
+        border-radius: 8px;
+        padding: 10px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">📝 Registrar Acceso</h1>
+                    <p class="text-muted mb-0">Entrada y salida de vehículos</p>
+                </div>
+                <div>
+                    <a href="{% url 'dashboard_vigilante' %}" class="btn btn-secondary me-2">
+                        <i class="fas fa-arrow-left"></i> Dashboard
+                    </a>
+                    <a href="{% url 'camara_vigilante' %}" class="btn btn-primary">
+                        <i class="fas fa-camera"></i> Detectar Placa
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="registro-container">
+                <!-- Alerta de placa detectada -->
+                <div class="detection-badge" id="detection-alert" style="display: none;">
+                    <div class="d-flex align-items-center">
+                        <i class="fas fa-search fa-lg me-3"></i>
+                        <div>
+                            <strong>Placa detectada automáticamente</strong>
+                            <div class="small">Confianza: <span id="detection-confidence">--</span>%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h4 class="text-center mb-4">
+                    <i class="fas fa-clipboard-list"></i> Nuevo Registro de Acceso
+                </h4>
+
+                <form id="form-registro-acceso">
+                    {% csrf_token %}
+                    
+                    <!-- Placa del vehículo -->
+                    <div class="form-group">
+                        <label for="placa" class="form-label">
+                            <i class="fas fa-car"></i> Placa del Vehículo
+                        </label>
+                        <input type="text" 
+                               class="form-control placa-input" 
+                               id="placa" 
+                               name="placa_detectada"
+                               placeholder="ABC-123"
+                               maxlength="8"
+                               required>
+                        <div class="form-text text-white-50">
+                            Ingresa la placa o usa el sistema de detección automática
+                        </div>
+                    </div>
+
+                    <!-- Tipo de acceso -->
+                    <div class="form-group">
+                        <label for="tipo_acceso" class="form-label">
+                            <i class="fas fa-exchange-alt"></i> Tipo de Acceso
+                        </label>
+                        <select class="form-select" id="tipo_acceso" name="tipo_acceso" required>
+                            <option value="">-- Seleccionar --</option>
+                            <option value="entrada">🚗 Entrada</option>
+                            <option value="salida">🚙 Salida</option>
+                        </select>
+                    </div>
+
+                    <!-- Información del vehículo -->
+                    <div class="vehiculo-info" id="vehiculo-info">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+
+                    <!-- Observaciones -->
+                    <div class="form-group">
+                        <label for="observaciones" class="form-label">
+                            <i class="fas fa-comment"></i> Observaciones (Opcional)
+                        </label>
+                        <textarea class="form-control" 
+                                  id="observaciones" 
+                                  name="observaciones" 
+                                  rows="3"
+                                  placeholder="Notas adicionales sobre este acceso..."></textarea>
+                    </div>
+
+                    <!-- Campo oculto para confianza -->
+                    <input type="hidden" id="confianza_deteccion" name="confianza_deteccion" value="0">
+
+                    <!-- Botones -->
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-registro" id="btn-registrar">
+                            <i class="fas fa-save"></i> Registrar Acceso
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Columna lateral con información adicional -->
+        <div class="col-md-4">
+            <!-- Estadísticas rápidas -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">📊 Estadísticas de Hoy</h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="h4 text-success mb-1" id="entradas-hoy">--</div>
+                            <small class="text-muted">Entradas</small>
+                        </div>
+                        <div class="col-6">
+                            <div class="h4 text-danger mb-1" id="salidas-hoy">--</div>
+                            <small class="text-muted">Salidas</small>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <div class="h5 text-primary mb-1" id="vehiculos-cochera">--</div>
+                        <small class="text-muted">En cochera</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Instrucciones -->
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h6 class="mb-0">💡 Instrucciones</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <small>Ingresa la placa manualmente o usa detección</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <small>El sistema verificará si existe el vehículo</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <small>Selecciona entrada o salida según corresponda</small>
+                        </li>
+                        <li class="mb-0">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <small>Añade observaciones si es necesario</small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Accesos recientes -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">🕒 Accesos Recientes</h6>
+                </div>
+                <div class="card-body" style="max-height: 250px; overflow-y: auto;">
+                    <div id="accesos-recientes">
+                        <div class="text-center text-muted py-3">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <p class="mb-0 small">Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let vehiculoEncontrado = false;
+
+    // Verificar si hay placa detectada desde la cámara
+    const placaDetectada = localStorage.getItem('placa_detectada');
+    const confianzaDeteccion = localStorage.getItem('confianza_deteccion');
+    
+    if (placaDetectada) {
+        $('#placa').val(placaDetectada);
+        $('#confianza_deteccion').val(confianzaDeteccion || 0);
+        $('#detection-alert').show();
+        $('#detection-confidence').text(Math.round(confianzaDeteccion || 0));
+        
+        // Buscar automáticamente el vehículo
+        buscarVehiculo(placaDetectada);
+        
+        // Limpiar localStorage
+        localStorage.removeItem('placa_detectada');
+        localStorage.removeItem('confianza_deteccion');
+    }
+
+    // Cargar estadísticas iniciales
+    cargarEstadisticas();
+    cargarAccesosRecientes();
+
+    // Buscar vehículo cuando se ingresa placa
+    $('#placa').on('input', function() {
+        let placa = $(this).val().toUpperCase();
+        $(this).val(placa);
+        
+        if (placa.length >= 6) {
+            buscarVehiculo(placa);
+        } else {
+            $('#vehiculo-info').hide().removeClass('vehiculo-found vehiculo-not-found');
+            vehiculoEncontrado = false;
+        }
+    });
+
+    // Enviar formulario
+    $('#form-registro-acceso').on('submit', function(e) {
+        e.preventDefault();
+        
+        if (!vehiculoEncontrado) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Vehículo no encontrado',
+                text: 'La placa ingresada no está registrada en el sistema'
+            });
+            return;
+        }
+
+        registrarAcceso();
+    });
+
+    function buscarVehiculo(placa) {
+        $.ajax({
+            url: '{% url "vigilante_buscar_vehiculo" %}',
+            type: 'GET',
+            data: { placa: placa },
+            success: function(response) {
+                if (response.encontrado) {
+                    mostrarInfoVehiculo(response);
+                    vehiculoEncontrado = true;
+                } else {
+                    mostrarVehiculoNoEncontrado(placa);
+                    vehiculoEncontrado = false;
+                }
+            },
+            error: function(xhr) {
+                console.error('Error al buscar vehículo:', xhr.responseText);
+                mostrarVehiculoNoEncontrado(placa);
+                vehiculoEncontrado = false;
+            }
+        });
+    }
+
+    function mostrarInfoVehiculo(data) {
+        const vehiculo = data.vehiculo;
+        const prestamo = data.prestamo_activo;
+        const ultimoAcceso = data.ultimo_acceso;
+        
+        let html = `
+            <div class="row">
+                <div class="col-md-6">
+                    <h6><i class="fas fa-car text-success"></i> Información del Vehículo</h6>
+                    <p class="mb-1"><strong>Placa:</strong> ${vehiculo.placa}</p>
+                    <p class="mb-1"><strong>Marca:</strong> ${vehiculo.marca}</p>
+                    <p class="mb-1"><strong>Modelo:</strong> ${vehiculo.modelo}</p>
+                    <p class="mb-1"><strong>Color:</strong> ${vehiculo.color}</p>
+                    <p class="mb-0"><strong>Propietario:</strong> ${vehiculo.propietario}</p>
+                </div>
+                <div class="col-md-6">
+                    <h6><i class="fas fa-user text-info"></i> Usuario Autorizado</h6>
+        `;
+
+        if (prestamo) {
+            html += `
+                <div class="badge badge-custom" style="background: #ffc107; color: #000;">
+                    <i class="fas fa-handshake"></i> PRÉSTAMO ACTIVO
+                </div>
+                <p class="mb-1 mt-2"><strong>Usuario:</strong> ${prestamo.usuario_autorizado}</p>
+                <p class="mb-1"><strong>Período:</strong> ${prestamo.fecha_inicio} al ${prestamo.fecha_fin}</p>
+                <p class="mb-0"><strong>Motivo:</strong> ${prestamo.motivo}</p>
+            `;
+        } else {
+            html += `
+                <div class="badge badge-custom" style="background: #28a745;">
+                    <i class="fas fa-user-check"></i> PROPIETARIO
+                </div>
+                <p class="mb-0 mt-2">${vehiculo.propietario}</p>
+            `;
+        }
+
+        html += '</div></div>';
+
+        // Último acceso
+        if (ultimoAcceso) {
+            const fecha = new Date(ultimoAcceso.timestamp);
+            const tipoClass = ultimoAcceso.tipo === 'entrada' ? 'success' : 'danger';
+            const icono = ultimoAcceso.tipo === 'entrada' ? 'fa-arrow-right' : 'fa-arrow-left';
+            
+            html += `
+                <div class="last-access">
+                    <h6><i class="fas fa-history text-warning"></i> Último Acceso</h6>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span>
+                            <i class="fas ${icono} text-${tipoClass}"></i>
+                            ${ultimoAcceso.tipo.toUpperCase()}
+                        </span>
+                        <span>${fecha.toLocaleString()}</span>
+                    </div>
+                    <small>Vigilante: ${ultimoAcceso.vigilante}</small>
+                </div>
+            `;
+        }
+
+        $('#vehiculo-info').html(html)
+            .removeClass('vehiculo-not-found')
+            .addClass('vehiculo-found')
+            .show();
+    }
+
+    function mostrarVehiculoNoEncontrado(placa) {
+        const html = `
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h6>Vehículo No Registrado</h6>
+                <p class="mb-0">La placa <strong>${placa}</strong> no está registrada en el sistema.</p>
+                <p class="mb-0 small">Contacta al administrador para registrar este vehículo.</p>
+            </div>
+        `;
+        
+        $('#vehiculo-info').html(html)
+            .removeClass('vehiculo-found')
+            .addClass('vehiculo-not-found')
+            .show();
+    }
+
+    function registrarAcceso() {
+        const formData = new FormData();
+        formData.append('placa_detectada', $('#placa').val());
+        formData.append('tipo_acceso', $('#tipo_acceso').val());
+        formData.append('observaciones', $('#observaciones').val());
+        formData.append('confianza_deteccion', $('#confianza_deteccion').val());
+        formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+
+        $('#btn-registrar').prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Registrando...');
+
+        $.ajax({
+            url: '{% url "vigilante_registrar_acceso" %}',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function(response) {
+                if (response.success) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Acceso registrado!',
+                        text: response.mensaje,
+                        showConfirmButton: true
+                    }).then(() => {
+                        // Limpiar formulario
+                        $('#form-registro-acceso')[0].reset();
+                        $('#vehiculo-info').hide();
+                        $('#detection-alert').hide();
+                        vehiculoEncontrado = false;
+                        
+                        // Actualizar estadísticas y accesos
+                        cargarEstadisticas();
+                        cargarAccesosRecientes();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: response.mensaje || 'Error desconocido'
+                    });
+                }
+            },
+            error: function(xhr) {
+                let errorMsg = 'Error de comunicación';
+                try {
+                    const error = JSON.parse(xhr.responseText);
+                    errorMsg = error.error || 'Error desconocido';
+                } catch (e) {
+                    errorMsg = 'Error del servidor';
+                }
+                
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al registrar',
+                    text: errorMsg
+                });
+            },
+            complete: function() {
+                $('#btn-registrar').prop('disabled', false).html('<i class="fas fa-save"></i> Registrar Acceso');
+            }
+        });
+    }
+
+    function cargarEstadisticas() {
+        $.ajax({
+            url: '{% url "vigilante_estadisticas" %}',
+            type: 'GET',
+            success: function(data) {
+                $('#entradas-hoy').text(data.entradas_hoy || 0);
+                $('#salidas-hoy').text(data.salidas_hoy || 0);
+                $('#vehiculos-cochera').text(data.vehiculos_en_cochera || 0);
+            }
+        });
+    }
+
+    function cargarAccesosRecientes() {
+        $.ajax({
+            url: '{% url "vigilante_vehiculos_cochera" %}',
+            type: 'GET',
+            success: function(data) {
+                let html = '';
+                if (data.vehiculos_en_cochera && data.vehiculos_en_cochera.length > 0) {
+                    // Mostrar los últimos 5
+                    data.vehiculos_en_cochera.slice(0, 5).forEach(function(vehiculo) {
+                        html += `
+                            <div class="border-bottom pb-2 mb-2">
+                                <div class="d-flex justify-content-between">
+                                    <strong>${vehiculo.placa}</strong>
+                                    <span class="badge badge-success">ENTRADA</span>
+                                </div>
+                                <small class="text-muted">${vehiculo.hora_entrada}</small>
+                            </div>
+                        `;
+                    });
+                } else {
+                    html = '<div class="text-center text-muted py-3"><p class="mb-0 small">No hay accesos recientes</p></div>';
+                }
+                $('#accesos-recientes').html(html);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

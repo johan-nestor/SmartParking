@@ -15,7 +15,14 @@ urlpatterns = [
     path('editar/<int:vehiculo_id>/', views.editar_vehiculo, name='editar_vehiculo'),
     path('eliminar/<int:vehiculo_id>/', views.eliminar_vehiculo, name='eliminar_vehiculo'),
     
-    # ===== ENDPOINTS ESPECÍFICOS PARA VIGILANTES (Vue 3 Frontend) =====
+    # ===== VISTAS HTML PARA VIGILANTES =====
+    path('vigilante/dashboard/', views.dashboard_vigilante, name='dashboard_vigilante'),
+    path('vigilante/camara/', views.camara_vigilante, name='camara_vigilante'),
+    path('vigilante/registro-acceso/', views.registro_acceso_vigilante, name='registro_acceso_vigilante'),
+    path('vigilante/buscar-vehiculo/', views.buscar_vehiculo_vigilante, name='buscar_vehiculo_vigilante'),
+    path('vigilante/vehiculos-cochera/', views.vehiculos_cochera_vigilante, name='vehiculos_cochera_vigilante'),
+    
+    # ===== ENDPOINTS ESPECÍFICOS PARA VIGILANTES (API) =====
     path('api/vigilante/estadisticas/', views.vigilante_estadisticas, name='vigilante_estadisticas'),
     path('api/vigilante/detectar-placa/', views.vigilante_detectar_placa, name='vigilante_detectar_placa'),
     path('api/vigilante/registrar-acceso/', views.vigilante_registrar_acceso, name='vigilante_registrar_acceso'),

@@ -1,70 +1,99 @@
-{% extends "base.html" %}
+{% extends "base_tailwind.html" %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-lg">
-                <div class="card-header bg-primary text-white text-center">
-                    <h4>Registro de Usuario</h4>
-                </div>
-                <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
-                        {% csrf_token %}
-                        
-                        <!-- Mostrar errores si hay -->
-                        {% if form.errors %}
-                        <div class="alert alert-danger">
-                            <ul>
-                                {% for field in form %}
-                                    {% for error in field.errors %}
-                                        <li>{{ field.label }}: {{ error }}</li>
-                                    {% endfor %}
-                                {% endfor %}
-                                {% for error in form.non_field_errors %}
-                                    <li>{{ error }}</li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                        {% endif %}
-                        
-                        <!-- Renderizar campos -->
-                        <div class="mb-3">
-                            {{ form.username.label_tag }}
-                            {{ form.username }}
-                        </div>
-                        <div class="mb-3">
-                            {{ form.email.label_tag }}
-                            {{ form.email }}
-                        </div>
-                        <div class="mb-3">
-                            {{ form.password1.label_tag }}
-                            {{ form.password1 }}
-                        </div>
-                        <div class="mb-3">
-                            {{ form.password2.label_tag }}
-                            {{ form.password2 }}
-                        </div>
-                        <div class="mb-3">
-                            {{ form.telefono.label_tag }}
-                            {{ form.telefono }}
-                        </div>
-                        <div class="mb-3">
-                            {{ form.direccion.label_tag }}
-                            {{ form.direccion }}
-                        </div>
-                        <div class="mb-3">
-                            {{ form.foto.label_tag }}
-                            {{ form.foto }}
-                        </div>
-
-                        <button type="submit" class="btn btn-success w-100">Registrarse</button>
-                    </form>
-                </div>
-                <div class="card-footer text-center">
-                    <a href="{% url 'login' %}">¿Ya tienes cuenta? Inicia sesión</a>
-                </div>
+<div class="min-h-screen bg-gradient-to-r from-purple-100 via-emerald-50 to-sky-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full space-y-8">
+        <div>
+            <div class="mx-auto h-12 w-12 rounded-full bg-emerald-600 flex items-center justify-center">
+                <span class="text-white font-bold text-lg">S</span>
             </div>
+            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+                Crear cuenta nueva
+            </h2>
+            <p class="mt-2 text-center text-sm text-gray-600">
+                O
+                <a href="{% url 'login' %}" class="font-medium text-emerald-600 hover:text-emerald-500">
+                    inicia sesión si ya tienes cuenta
+                </a>
+            </p>
+        </div>
+
+        <div class="bg-white shadow-xl rounded-lg p-8">
+            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Mostrar errores si hay -->
+                {% if form.errors %}
+                <div class="rounded-md bg-red-50 p-4">
+                    <div class="text-sm text-red-700">
+                        <ul class="list-disc pl-5 space-y-1">
+                            {% for field in form %}
+                                {% for error in field.errors %}
+                                    <li>{{ field.label }}: {{ error }}</li>
+                                {% endfor %}
+                            {% endfor %}
+                            {% for error in form.non_field_errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">Usuario</label>
+                        <input type="text" id="{{ form.username.id_for_label }}" name="{{ form.username.name }}" 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                               value="{{ form.username.value|default_if_none:'' }}">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">Email</label>
+                        <input type="email" id="{{ form.email.id_for_label }}" name="{{ form.email.name }}" 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                               value="{{ form.email.value|default_if_none:'' }}">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700">Contraseña</label>
+                        <input type="password" id="{{ form.password1.id_for_label }}" name="{{ form.password1.name }}" 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700">Confirmar contraseña</label>
+                        <input type="password" id="{{ form.password2.id_for_label }}" name="{{ form.password2.name }}" 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.telefono.id_for_label }}" class="block text-sm font-medium text-gray-700">Teléfono (opcional)</label>
+                        <input type="text" id="{{ form.telefono.id_for_label }}" name="{{ form.telefono.name }}" 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                               value="{{ form.telefono.value|default_if_none:'' }}">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.direccion.id_for_label }}" class="block text-sm font-medium text-gray-700">Dirección (opcional)</label>
+                        <input type="text" id="{{ form.direccion.id_for_label }}" name="{{ form.direccion.name }}" 
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
+                               value="{{ form.direccion.value|default_if_none:'' }}">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.foto.id_for_label }}" class="block text-sm font-medium text-gray-700">Foto de perfil (opcional)</label>
+                        <input type="file" id="{{ form.foto.id_for_label }}" name="{{ form.foto.name }}" accept="image/*"
+                               class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
+                        Crear cuenta
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

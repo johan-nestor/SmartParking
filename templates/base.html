@@ -45,11 +45,17 @@
                     {% if user.is_authenticated %}
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                {% if user.perfil.foto %}
                                 <img src="{{ user.perfil.foto.url }}" alt="perfil" class="rounded-circle" width="30" height="30">
+                                {% else %}
+                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
+                                    <span class="text-white small">{{ user.username|first|upper }}</span>
+                                </div>
+                                {% endif %}
                                 <span class="ms-2">{{ user.username }}</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUser">
-                                <a class="dropdown-item" href="{% url 'editar_perfil' %}"   >Perfil</a>
+                                <li><a class="dropdown-item" href="{% url 'editar_perfil' %}">Perfil</a></li>
                                 <li><a class="dropdown-item" href="{% url 'lista_vehiculos' %}">Mis Vehículos</a></li>
                                 <li><a class="dropdown-item" href="#">Historial</a></li>
                                 <li><hr class="dropdown-divider"></li>
@@ -57,12 +63,12 @@
                             </ul>
                         </li>
                     {% else %}
-                        <!-- <li class="nav-item">
+                        <li class="nav-item">
                             <a class="nav-link" href="{% url 'login' %}">Ingresar</a>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'registro' %}">Registrarse</a>
-                        </li> -->
+                        </li>
                     {% endif %}
                 </ul>
             </div>
