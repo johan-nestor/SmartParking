@@ -4,91 +4,71 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SmartParking</title>
-
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <style>
-        body {
-            background-color: #f8f9fa;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-        main {
-            flex: 1;
-        }
-        footer {
-            background-color: #212529;
-            color: #fff;
-            text-align: center;
-            padding: 10px 0;
-        }
-    </style>
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body>
-
-    <!-- Barra de navegación -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container-fluid">
-            <!-- Logo o nombre -->
-            <a class="navbar-brand" href="{% url 'dashboard' %}">SmartParking</a>
-
-            <!-- Botón hamburguesa para móviles -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSmart" aria-controls="navbarSmart" aria-expanded="false" aria-label="Menú">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <!-- Enlaces -->
-            <div class="collapse navbar-collapse" id="navbarSmart">
-                <ul class="navbar-nav ms-auto">
+<body class="flex flex-col min-h-screen bg-gradient-to-br from-purple-50 via-emerald-50 to-sky-50 text-slate-800">
+    <!-- Navbar -->
+    <nav class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl backdrop-blur-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <!-- Logo -->
+                <a href="{% url 'dashboard' %}" class="text-2xl font-bold tracking-wide hover:text-emerald-400 transition-all duration-300 hover:scale-105 flex items-center gap-2">
+                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
+                        <span class="text-white font-bold text-lg">S</span>
+                    </div>
+                    SmartParking
+                </a>
+                <!-- Links -->
+                <div class="hidden md:flex items-center space-x-6">
                     {% if user.is_authenticated %}
-                        <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="navbarUser" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                {% if user.perfil.foto %}
-                                <img src="{{ user.perfil.foto.url }}" alt="perfil" class="rounded-circle" width="30" height="30">
-                                {% else %}
-                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" style="width: 30px; height: 30px;">
-                                    <span class="text-white small">{{ user.username|first|upper }}</span>
-                                </div>
-                                {% endif %}
-                                <span class="ms-2">{{ user.username }}</span>
-                            </a>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarUser">
-                                <li><a class="dropdown-item" href="{% url 'editar_perfil' %}">Perfil</a></li>
-                                <li><a class="dropdown-item" href="{% url 'lista_vehiculos' %}">Mis Vehículos</a></li>
-                                <li><a class="dropdown-item" href="#">Historial</a></li>
-                                <li><hr class="dropdown-divider"></li>
-                                <li><a class="dropdown-item text-danger" href="{% url 'logout' %}">Salir</a></li>
-                            </ul>
-                        </li>
+                        <a href="{% url 'logout' %}" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium shadow-lg hover:from-red-600 hover:to-red-700 hover:shadow-red-500/50 transition-all duration-300">
+                            Cerrar Sesión
+                        </a>
                     {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">Ingresar</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'registro' %}">Registrarse</a>
-                        </li>
+                        <a href="{% url 'login' %}" class="hover:text-emerald-400 transition-all duration-300 font-medium px-3 py-2 rounded-lg hover:bg-slate-700/50">Ingresar</a>
+                        <a href="{% url 'registro' %}" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 font-medium shadow-lg hover:shadow-emerald-500/50 hover:scale-105">
+                            Registrarse
+                        </a>
                     {% endif %}
-                </ul>
+                </div>
+                <!-- Mobile button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-btn" class="focus:outline-none p-2 rounded-lg hover:bg-slate-700/50 transition-all duration-300">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+                        </svg>
+                    </button>
+                </div>
             </div>
         </div>
+        <!-- Mobile menu -->
+        <div id="mobile-menu" class="hidden md:hidden px-4 pb-4 space-y-2 bg-slate-800/95 text-slate-200 backdrop-blur-sm">
+            {% if user.is_authenticated %}
+                <a href="{% url 'logout' %}" class="block py-2.5 px-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium shadow hover:from-red-600 hover:to-red-700 hover:shadow-red-500/50 transition-all duration-300 text-center">
+                    Cerrar Sesión
+                </a>
+            {% else %}
+                <a href="{% url 'login' %}" class="block py-2.5 px-3 hover:text-emerald-400 hover:bg-slate-700/50 rounded-lg transition-all duration-200">Ingresar</a>
+                <a href="{% url 'registro' %}" class="block py-2.5 px-3 hover:text-emerald-400 hover:bg-slate-700/50 rounded-lg transition-all duration-200">Registrarse</a>
+            {% endif %}
+        </div>
     </nav>
-
     <!-- Contenido principal -->
-    <main class="container my-4">
+    <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {% block content %}
         {% endblock %}
     </main>
-
     <!-- Footer -->
-    <footer>
-        <div class="container">
-            <p class="mb-0">© 2025 SmartParking | Todos los derechos reservados</p>
-        </div>
+    <footer class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-slate-200 text-center py-6 mt-8 border-t border-slate-700/50">
+        <p class="text-sm font-medium">© 2025 SmartParking | Todos los derechos reservados</p>
     </footer>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Script menú móvil -->
+    <script>
+        const btn = document.getElementById("mobile-menu-btn");
+        const menu = document.getElementById("mobile-menu");
+        btn.addEventListener("click", () => {
+            menu.classList.toggle("hidden");
+        });
+    </script>
 </body>
 </html>

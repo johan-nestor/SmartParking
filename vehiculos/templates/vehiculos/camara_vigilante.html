@@ -1,592 +1,82 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
 
-{% block title %}Detección de Placas - Smart Parking{% endblock %}
-
-{% block extra_css %}
-<style>
-    .camera-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 15px;
-        padding: 20px;
-        color: white;
-    }
-    .video-container {
-        position: relative;
-        background: #000;
-        border-radius: 10px;
-        overflow: hidden;
-    }
-    #video-stream {
-        width: 100%;
-        height: auto;
-        display: block;
-    }
-    .detection-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-    }
-    .plate-box {
-        position: absolute;
-        border: 3px solid #00ff00;
-        background: rgba(0, 255, 0, 0.1);
-        font-weight: bold;
-        color: #00ff00;
-        padding: 5px;
-        font-size: 14px;
-    }
-    .btn-capture {
-        background: linear-gradient(45deg, #28a745, #20c997);
-        border: none;
-        color: white;
-        padding: 15px 30px;
-        font-size: 18px;
-        border-radius: 50px;
-        transition: all 0.3s ease;
-    }
-    .btn-capture:hover {
-        transform: scale(1.05);
-        box-shadow: 0 8px 25px rgba(40, 167, 69, 0.3);
-        color: white;
-    }
-    .btn-capture:disabled {
-        background: #6c757d;
-        transform: none;
-        cursor: not-allowed;
-    }
-    .detection-results {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 15px;
-        margin-top: 15px;
-    }
-    .plate-detected {
-        background: rgba(40, 167, 69, 0.2);
-        border: 2px solid #28a745;
-        border-radius: 8px;
-        padding: 10px;
-        margin-bottom: 10px;
-    }
-    .confidence-bar {
-        background: rgba(255, 255, 255, 0.3);
-        height: 8px;
-        border-radius: 4px;
-        overflow: hidden;
-        margin-top: 5px;
-    }
-    .confidence-fill {
-        background: #28a745;
-        height: 100%;
-        transition: width 0.3s ease;
-    }
-    .status-indicator {
-        position: absolute;
-        top: 10px;
-        right: 10px;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-size: 12px;
-        font-weight: bold;
-    }
-    .status-active {
-        background: #28a745;
-        color: white;
-    }
-    .status-inactive {
-        background: #dc3545;
-        color: white;
-    }
-    .stats-mini {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
-        margin-bottom: 15px;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
-    <!-- Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <h1 class="h3 mb-0">📹 Detección de Placas</h1>
-                    <p class="text-muted mb-0">Sistema YOLO en tiempo real</p>
-                </div>
-                <div>
-                    <a href="{% url 'dashboard_vigilante' %}" class="btn btn-secondary">
-                        <i class="fas fa-arrow-left"></i> Volver al Dashboard
-                    </a>
-                </div>
-            </div>
+<div class="min-h-screen bg-gradient-to-br from-purple-50 via-emerald-50 to-sky-50 py-10">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
+
+        <!-- Encabezado -->
+        <div class="text-center">
+            <h1 class="text-4xl font-extrabold text-slate-900 mb-2">Detección de Placas</h1>
+            <p class="text-lg text-slate-600">Monitoreo en tiempo real con SmartParking UDH</p>
         </div>
-    </div>
 
-    <div class="row">
-        <!-- Columna principal - Cámara -->
-        <div class="col-md-8">
-            <div class="camera-container">
-                <div class="row mb-3">
-                    <div class="col-md-6">
-                        <div class="stats-mini">
-                            <div>Placas Detectadas Hoy</div>
-                            <div class="h4 mb-0" id="placas-detectadas-hoy">0</div>
+        <!-- Cámara + Estado -->
+        <div class="camera-container bg-gradient-to-r from-emerald-500 to-sky-500 rounded-2xl p-6 shadow-xl text-white relative">
+            <div class="flex flex-col lg:flex-row items-center gap-8">
+
+                <!-- Video -->
+                <div class="flex-1 relative w-full">
+                    <div class="video-container bg-slate-900 rounded-xl shadow-lg overflow-hidden relative">
+                        <video id="video-stream" autoplay playsinline muted class="w-full h-72 object-cover rounded-xl"></video>
+                        <canvas id="canvas" class="hidden"></canvas>
+                        <div id="detection-overlay" class="detection-overlay"></div>
+
+                        <!-- Estado cámara -->
+                        <div id="camera-status" class="absolute top-4 right-4 px-4 py-2 rounded-full text-sm font-semibold shadow-md bg-red-500">
+                            Cámara inactiva
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="stats-mini">
-                            <div>Última Detección</div>
-                            <div class="small" id="ultima-deteccion">--</div>
-                        </div>
+
+                    <!-- Botones -->
+                    <div class="mt-6 flex flex-wrap gap-4 justify-center">
+                        <button id="capture-btn" disabled
+                            class="btn-capture px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-sky-600 text-white font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition hover:scale-105">
+                            📸 Capturar
+                        </button>
+                        <button id="clear-btn"
+                            class="btn-secondary px-6 py-3 rounded-full bg-slate-100 text-slate-700 font-medium shadow hover:bg-slate-200 transition">
+                            🧹 Limpiar
+                        </button>
                     </div>
                 </div>
 
-                <div class="video-container">
-                    <video id="video-stream" autoplay muted playsinline>
-                        <p class="text-center text-white py-4">
-                            Tu navegador no soporta video HTML5
-                        </p>
-                    </video>
-                    
-                    <!-- Overlay para mostrar detecciones -->
-                    <div class="detection-overlay" id="detection-overlay"></div>
-                    
-                    <!-- Indicador de estado -->
-                    <div class="status-indicator status-inactive" id="camera-status">
-                        <i class="fas fa-video-slash"></i> Cámara Inactiva
-                    </div>
-                </div>
-
-                <!-- Controles -->
-                <div class="text-center mt-4">
-                    <button class="btn btn-capture" id="btn-iniciar-camara">
-                        <i class="fas fa-video"></i> Iniciar Cámara
-                    </button>
-                    <button class="btn btn-capture" id="btn-capturar" style="display: none;" disabled>
-                        <i class="fas fa-camera"></i> Detectar Placa
-                    </button>
-                    <button class="btn btn-secondary" id="btn-detener" style="display: none;">
-                        <i class="fas fa-stop"></i> Detener
-                    </button>
-                </div>
-
-                <!-- Resultados de detección -->
-                <div class="detection-results" id="detection-results" style="display: none;">
-                    <h6><i class="fas fa-search"></i> Resultados de Detección</h6>
-                    <div id="plates-container">
-                        <!-- Las placas detectadas aparecerán aquí -->
+                <!-- Resultados -->
+                <div class="flex-1 w-full">
+                    <h2 class="text-xl font-bold text-white mb-4">Resultados de detección</h2>
+                    <div id="detection-results" class="space-y-4">
+                        <p class="text-sm opacity-80">No se han detectado placas todavía...</p>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Columna lateral - Información y acciones -->
-        <div class="col-md-4">
-            <!-- Instrucciones -->
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h6 class="mb-0">📋 Instrucciones</h6>
-                </div>
-                <div class="card-body">
-                    <ol class="mb-0 small">
-                        <li>Haz clic en "Iniciar Cámara"</li>
-                        <li>Permite el acceso a tu cámara</li>
-                        <li>Apunta hacia la placa del vehículo</li>
-                        <li>Haz clic en "Detectar Placa"</li>
-                        <li>Espera los resultados del análisis</li>
-                    </ol>
-                </div>
+        <!-- Estadísticas -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+            <div class="stats-mini bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
+                <div class="text-3xl">🚗</div>
+                <h3 class="mt-2 text-lg font-semibold">Vehículos detectados</h3>
+                <p id="vehicle-count" class="text-2xl font-bold text-emerald-600">0</p>
             </div>
+            <div class="stats-mini bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
+                <div class="text-3xl">🎯</div>
+                <h3 class="mt-2 text-lg font-semibold">Confianza promedio</h3>
+                <p id="confidence-avg" class="text-2xl font-bold text-sky-600">--%</p>
+            </div>
+            <div class="stats-mini bg-white rounded-xl shadow-md p-6 text-center hover:shadow-lg transition">
+                <div class="text-3xl">📊</div>
+                <h3 class="mt-2 text-lg font-semibold">Última actualización</h3>
+                <p id="last-update" class="text-sm text-slate-500">--</p>
+            </div>
+        </div>
 
-            <!-- Estado de YOLO -->
-            <div class="card mb-3">
-                <div class="card-header">
-                    <h6 class="mb-0">🤖 Estado YOLO</h6>
-                </div>
-                <div class="card-body">
-                    <div class="d-flex align-items-center">
-                        <div class="spinner-border spinner-border-sm me-2" id="yolo-spinner" style="display: none;"></div>
-                        <span id="yolo-status">Listo para detectar</span>
-                    </div>
-                    <div class="mt-2">
-                        <small class="text-muted">Confianza mínima: 70%</small>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Historial de detecciones -->
-            <div class="card">
-                <div class="card-header">
-                    <h6 class="mb-0">📊 Historial Reciente</h6>
-                </div>
-                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
-                    <div id="historial-detecciones">
-                        <div class="text-center text-muted py-3">
-                            <i class="fas fa-history fa-2x mb-2"></i>
-                            <p class="mb-0 small">Sin detecciones aún</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
+        <!-- Historial -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-2xl font-bold text-slate-800 mb-4">Historial de Detecciones</h2>
+            <ul id="detection-history" class="space-y-3 text-sm text-slate-600">
+                <li class="opacity-70">Aún no hay registros...</li>
+            </ul>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-$(document).ready(function() {
-    let videoStream = null;
-    let detectionInterval = null;
-    let deteccionesHoy = 0;
-
-    // Referencias a elementos DOM
-    const video = $('#video-stream')[0];
-    const btnIniciarCamera = $('#btn-iniciar-camara');
-    const btnCapturar = $('#btn-capturar');
-    const btnDetener = $('#btn-detener');
-    const cameraStatus = $('#camera-status');
-    const detectionResults = $('#detection-results');
-    const platesContainer = $('#plates-container');
-    const yoloStatus = $('#yolo-status');
-    const yoloSpinner = $('#yolo-spinner');
-    const historialDetecciones = $('#historial-detecciones');
-
-    // Iniciar cámara
-    btnIniciarCamera.click(function() {
-        iniciarCamara();
-    });
-
-    // Capturar y detectar
-    btnCapturar.click(function() {
-        detectarPlaca();
-    });
-
-    // Detener cámara
-    btnDetener.click(function() {
-        detenerCamara();
-    });
-
-    function iniciarCamara() {
-        console.log('Intentando acceder a la cámara...');
-        
-        // Verificar si el navegador soporta getUserMedia
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Navegador no compatible',
-                text: 'Tu navegador no soporta acceso a cámara. Usa Chrome, Firefox o Edge.',
-            });
-            return;
-        }
-
-        // Configuraciones de video con fallbacks
-        const videoConstraints = [
-            // Configuración ideal
-            {
-                video: {
-                    width: { ideal: 1280, min: 640 },
-                    height: { ideal: 720, min: 480 },
-                    facingMode: 'environment'
-                }
-            },
-            // Fallback 1: Cualquier cámara trasera
-            {
-                video: {
-                    facingMode: 'environment'
-                }
-            },
-            // Fallback 2: Cualquier cámara
-            {
-                video: {
-                    width: { ideal: 640 },
-                    height: { ideal: 480 }
-                }
-            },
-            // Fallback 3: Video básico
-            {
-                video: true
-            }
-        ];
-
-        function tryCamera(constraintIndex = 0) {
-            if (constraintIndex >= videoConstraints.length) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de cámara',
-                    html: `
-                        <p>No se pudo acceder a ninguna cámara. Posibles soluciones:</p>
-                        <ul style="text-align: left; margin: 10px 0;">
-                            <li>Permite el acceso a la cámara en tu navegador</li>
-                            <li>Verifica que no haya otras aplicaciones usando la cámara</li>
-                            <li>Intenta recargar la página</li>
-                            <li>Usa HTTPS en lugar de HTTP</li>
-                        </ul>
-                    `
-                });
-                return;
-            }
-
-            const constraints = videoConstraints[constraintIndex];
-            console.log(`Probando configuración ${constraintIndex + 1}:`, constraints);
-
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(function(stream) {
-                    console.log('Cámara accedida exitosamente');
-                    videoStream = stream;
-                    video.srcObject = stream;
-                    
-                    // Esperar a que el video esté listo
-                    video.onloadedmetadata = function() {
-                        console.log(`Video listo: ${video.videoWidth}x${video.videoHeight}`);
-                        
-                        // Actualizar UI
-                        btnIniciarCamera.hide();
-                        btnCapturar.show().prop('disabled', false);
-                        btnDetener.show();
-                        cameraStatus.removeClass('status-inactive').addClass('status-active')
-                            .html('<i class="fas fa-video"></i> Cámara Activa');
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: '¡Cámara iniciada!',
-                            text: 'Ya puedes detectar placas',
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                    };
-
-                    // Manejar errores del video
-                    video.onerror = function(e) {
-                        console.error('Error en el elemento video:', e);
-                        tryCamera(constraintIndex + 1);
-                    };
-                })
-                .catch(function(error) {
-                    console.error(`Error con configuración ${constraintIndex + 1}:`, error);
-                    
-                    // Mostrar error específico solo en el último intento
-                    if (constraintIndex === videoConstraints.length - 1) {
-                        let errorMessage = 'Error desconocido';
-                        
-                        switch(error.name) {
-                            case 'NotFoundError':
-                                errorMessage = 'No se encontró ninguna cámara en el dispositivo';
-                                break;
-                            case 'NotAllowedError':
-                                errorMessage = 'Acceso a cámara denegado. Permite el acceso y recarga la página';
-                                break;
-                            case 'NotReadableError':
-                                errorMessage = 'La cámara está siendo usada por otra aplicación';
-                                break;
-                            case 'OverconstrainedError':
-                                errorMessage = 'La cámara no soporta las configuraciones solicitadas';
-                                break;
-                            case 'SecurityError':
-                                errorMessage = 'Acceso de cámara bloqueado por seguridad. Usa HTTPS';
-                                break;
-                            default:
-                                errorMessage = `Error: ${error.message || error.name}`;
-                        }
-                        
-                        Swal.fire({
-                            icon: 'error',
-                            title: 'Error de cámara',
-                            text: errorMessage,
-                        });
-                    } else {
-                        // Intentar siguiente configuración
-                        setTimeout(() => tryCamera(constraintIndex + 1), 500);
-                    }
-                });
-        }
-
-        tryCamera(0);
-    }
-
-    function detectarPlaca() {
-        btnCapturar.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Detectando...');
-        yoloStatus.text('Analizando imagen...');
-        yoloSpinner.show();
-
-        // Capturar frame del video
-        const canvas = document.createElement('canvas');
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(video, 0, 0);
-
-        // Convertir a blob
-        canvas.toBlob(function(blob) {
-            const formData = new FormData();
-            formData.append('image', blob, 'captura.jpg');
-
-            $.ajax({
-                url: '{% url "vigilante_detectar_placa" %}',
-                type: 'POST',
-                data: formData,
-                processData: false,
-                contentType: false,
-                headers: {
-                    'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-                },
-                success: function(response) {
-                    mostrarResultadosDeteccion(response);
-                    actualizarHistorial(response);
-                },
-                error: function(xhr) {
-                    console.error('Error en detección:', xhr.responseText);
-                    let errorMsg = 'Error desconocido';
-                    try {
-                        const error = JSON.parse(xhr.responseText);
-                        errorMsg = error.error || error.message || 'Error en la detección';
-                    } catch (e) {
-                        errorMsg = 'Error de comunicación con el servidor';
-                    }
-                    
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error en detección',
-                        text: errorMsg
-                    });
-                },
-                complete: function() {
-                    btnCapturar.prop('disabled', false).html('<i class="fas fa-camera"></i> Detectar Placa');
-                    yoloStatus.text('Listo para detectar');
-                    yoloSpinner.hide();
-                }
-            });
-        }, 'image/jpeg', 0.8);
-    }
-
-    function mostrarResultadosDeteccion(response) {
-        if (response.success && response.plates_detected && response.plates_detected.length > 0) {
-            let html = '';
-            response.plates_detected.forEach(function(placa, index) {
-                const confianza = response.confidence_scores ? response.confidence_scores[index] : 0;
-                html += `
-                    <div class="plate-detected">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-1">${placa}</h6>
-                                <small>Confianza: ${Math.round(confianza)}%</small>
-                            </div>
-                            <button class="btn btn-success btn-sm" onclick="registrarAccesoRapido('${placa}', ${confianza})">
-                                <i class="fas fa-plus"></i> Registrar
-                            </button>
-                        </div>
-                        <div class="confidence-bar">
-                            <div class="confidence-fill" style="width: ${confianza}%"></div>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            platesContainer.html(html);
-            detectionResults.show();
-            deteccionesHoy += response.plates_detected.length;
-            $('#placas-detectadas-hoy').text(deteccionesHoy);
-            
-            Swal.fire({
-                icon: 'success',
-                title: '¡Placa detectada!',
-                text: `Se detectaron ${response.plates_detected.length} placa(s)`,
-                timer: 2000,
-                showConfirmButton: false
-            });
-        } else {
-            detectionResults.hide();
-            Swal.fire({
-                icon: 'info',
-                title: 'Sin detecciones',
-                text: response.message || 'No se detectaron placas en la imagen',
-                timer: 2000,
-                showConfirmButton: false
-            });
-        }
-    }
-
-    function actualizarHistorial(response) {
-        if (response.success && response.plates_detected && response.plates_detected.length > 0) {
-            const ahora = new Date();
-            let historial = '';
-            
-            response.plates_detected.forEach(function(placa, index) {
-                const confianza = response.confidence_scores ? response.confidence_scores[index] : 0;
-                historial += `
-                    <div class="border-bottom pb-2 mb-2">
-                        <div class="d-flex justify-content-between">
-                            <strong>${placa}</strong>
-                            <small class="text-muted">${ahora.toLocaleTimeString()}</small>
-                        </div>
-                        <small class="text-success">Confianza: ${Math.round(confianza)}%</small>
-                    </div>
-                `;
-            });
-
-            // Agregar al inicio del historial
-            if (historialDetecciones.find('.border-bottom').length === 0) {
-                historialDetecciones.html(historial);
-            } else {
-                historialDetecciones.prepend(historial);
-            }
-
-            // Mantener solo las últimas 10 detecciones
-            const items = historialDetecciones.find('.border-bottom');
-            if (items.length > 10) {
-                items.slice(10).remove();
-            }
-
-            $('#ultima-deteccion').text(ahora.toLocaleTimeString());
-        }
-    }
-
-    function detenerCamara() {
-        if (videoStream) {
-            videoStream.getTracks().forEach(track => track.stop());
-            video.srcObject = null;
-            videoStream = null;
-        }
-
-        // Actualizar UI
-        btnIniciarCamera.show();
-        btnCapturar.hide();
-        btnDetener.hide();
-        detectionResults.hide();
-        cameraStatus.removeClass('status-active').addClass('status-inactive')
-            .html('<i class="fas fa-video-slash"></i> Cámara Inactiva');
-    }
-
-    // Función global para registro rápido
-    window.registrarAccesoRapido = function(placa, confianza) {
-        // Guardar datos en localStorage para usar en la página de registro
-        localStorage.setItem('placa_detectada', placa);
-        localStorage.setItem('confianza_deteccion', confianza);
-        
-        // Redirigir a página de registro
-        window.location.href = '{% url "registro_acceso_vigilante" %}';
-    };
-
-    // Cerrar cámara al salir de la página
-    $(window).on('beforeunload', function() {
-        detenerCamara();
-    });
-
-    // Mostrar notificación inicial
-    Swal.fire({
-        icon: 'info',
-        title: 'Sistema YOLO',
-        text: 'Inicia la cámara para comenzar la detección de placas',
-        timer: 3000,
-        showConfirmButton: false
-    });
-});
-</script>
 {% endblock %}

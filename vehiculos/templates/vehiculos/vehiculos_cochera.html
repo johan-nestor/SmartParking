@@ -3,587 +3,127 @@
 
 {% block title %}Vehículos en Cochera - Smart Parking{% endblock %}
 
-{% block extra_css %}
-<style>
-    .cochera-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 15px;
-        color: white;
-        padding: 25px;
-        margin-bottom: 25px;
-    }
-    .vehicle-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-        gap: 20px;
-    }
-    .vehicle-card {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-        border-left: 5px solid #28a745;
-    }
-    .vehicle-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-    }
-    .vehicle-card.prestamo {
-        border-left-color: #ffc107;
-    }
-    .vehicle-header {
-        display: flex;
-        justify-content-between;
-        align-items: center;
-        margin-bottom: 15px;
-    }
-    .placa-badge {
-        background: linear-gradient(45deg, #007bff, #0056b3);
-        color: white;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 16px;
-        letter-spacing: 1px;
-    }
-    .tiempo-estacionado {
-        background: #f8f9fa;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        padding: 10px;
-        text-align: center;
-        margin: 15px 0;
-    }
-    .tiempo-numero {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: #495057;
-    }
-    .badge-status {
-        padding: 6px 12px;
-        border-radius: 15px;
-        font-size: 11px;
-        font-weight: bold;
-    }
-    .status-propietario {
-        background: #28a745;
-        color: white;
-    }
-    .status-prestamo {
-        background: #ffc107;
-        color: #000;
-    }
-    .btn-action-small {
-        padding: 6px 12px;
-        font-size: 12px;
-        border-radius: 6px;
-    }
-    .empty-state {
-        text-align: center;
-        padding: 60px 20px;
-        color: #6c757d;
-    }
-    .stats-mini {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 15px;
-        text-align: center;
-        margin-bottom: 15px;
-    }
-    .filter-container {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 10px;
-        padding: 15px;
-        margin-bottom: 20px;
-    }
-    .search-box {
-        background: rgba(255, 255, 255, 0.9);
-        border: none;
-        border-radius: 8px;
-        padding: 10px 15px;
-    }
-    .refresh-indicator {
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 14px;
-        color: rgba(255, 255, 255, 0.8);
-    }
-    .dot-indicator {
-        width: 8px;
-        height: 8px;
-        background: #28a745;
-        border-radius: 50%;
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.3; }
-        100% { opacity: 1; }
-    }
-    .vehicle-actions {
-        display: flex;
-        gap: 8px;
-        justify-content: center;
-        margin-top: 15px;
-    }
-</style>
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid py-4">
+<div class="max-w-7xl mx-auto px-4 py-8 space-y-6">
     <!-- Header -->
-    <div class="cochera-header">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <h2 class="mb-2">
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-2xl p-8 shadow-xl">
+        <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div>
+                <h2 class="text-3xl font-extrabold flex items-center gap-3">
                     <i class="fas fa-car"></i> Vehículos en Cochera
                 </h2>
-                <p class="mb-0">Vehículos actualmente estacionados</p>
-                <div class="refresh-indicator mt-2">
-                    <div class="dot-indicator"></div>
-                    <span>Actualización automática cada 30 segundos</span>
+                <p class="text-indigo-200 mt-1">Monitoreo en tiempo real de vehículos estacionados</p>
+                <div class="flex items-center gap-2 mt-2 text-sm text-indigo-100">
+                    <span class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                    <span>Actualización cada 30s</span>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="row">
-                    <div class="col-4">
-                        <div class="stats-mini">
-                            <div class="h3 mb-1" id="total-vehiculos">--</div>
-                            <small>Total</small>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="stats-mini">
-                            <div class="h3 mb-1" id="vehiculos-propietarios">--</div>
-                            <small>Propietarios</small>
-                        </div>
-                    </div>
-                    <div class="col-4">
-                        <div class="stats-mini">
-                            <div class="h3 mb-1" id="vehiculos-prestamos">--</div>
-                            <small>Préstamos</small>
-                        </div>
-                    </div>
+            <!-- Stats -->
+            <div class="grid grid-cols-3 gap-4 w-full md:w-auto">
+                <div class="bg-white/20 backdrop-blur-md rounded-xl p-4 text-center shadow">
+                    <div class="text-3xl font-bold" id="total-vehiculos">--</div>
+                    <p class="text-xs uppercase tracking-wide text-indigo-100">Total</p>
+                </div>
+                <div class="bg-white/20 backdrop-blur-md rounded-xl p-4 text-center shadow">
+                    <div class="text-3xl font-bold" id="vehiculos-propietarios">--</div>
+                    <p class="text-xs uppercase tracking-wide text-indigo-100">Propietarios</p>
+                </div>
+                <div class="bg-white/20 backdrop-blur-md rounded-xl p-4 text-center shadow">
+                    <div class="text-3xl font-bold" id="vehiculos-prestamos">--</div>
+                    <p class="text-xs uppercase tracking-wide text-indigo-100">Préstamos</p>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Controles -->
-        <div class="row mt-3">
-            <div class="col-md-8">
-                <div class="filter-container">
-                    <div class="row align-items-center">
-                        <div class="col-md-6">
-                            <input type="text" 
-                                   class="form-control search-box" 
-                                   id="filtro-buscar"
-                                   placeholder="🔍 Buscar por placa, propietario o usuario...">
-                        </div>
-                        <div class="col-md-6">
-                            <select class="form-select search-box" id="filtro-tipo">
-                                <option value="">Todos los vehículos</option>
-                                <option value="propietario">Solo propietarios</option>
-                                <option value="prestamo">Solo préstamos</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
+    <!-- 🔎 Filtros mejorados -->
+    <div class="bg-white rounded-2xl shadow-lg p-6 border border-gray-100">
+        <div class="flex flex-col md:flex-row items-center gap-4 w-full">
+            
+            <!-- Input Buscar -->
+            <div class="relative flex-1 w-full">
+                <i class="fas fa-search absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                <input type="text" 
+                       id="filtro-buscar"
+                       placeholder="Buscar por placa, propietario o usuario..."
+                       class="w-full rounded-xl border border-gray-200 pl-11 pr-4 py-3 
+                              text-gray-800 placeholder-gray-400 text-sm
+                              focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 
+                              transition bg-gray-50 hover:bg-white shadow-sm">
             </div>
-            <div class="col-md-4 text-end">
-                <a href="{% url 'dashboard_vigilante' %}" class="btn btn-outline-light me-2">
+
+            <!-- Select Tipo -->
+            <div class="relative w-full md:w-1/3">
+                <select id="filtro-tipo"
+                        class="appearance-none w-full rounded-xl border border-gray-200 pl-4 pr-10 py-3 
+                               text-gray-800 text-sm cursor-pointer
+                               focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 
+                               transition bg-gray-50 hover:bg-white shadow-sm">
+                    <option value="">Todos los vehículos</option>
+                    <option value="propietario">Solo propietarios</option>
+                    <option value="prestamo">Solo préstamos</option>
+                </select>
+                <!-- Icono custom flecha -->
+                <i class="fas fa-chevron-down absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none"></i>
+            </div>
+
+            <!-- Botones -->
+            <div class="flex gap-3 w-full md:w-auto justify-end">
+                <a href="{% url 'dashboard_vigilante' %}" 
+                   class="flex items-center gap-2 px-5 py-3 rounded-xl 
+                          bg-gray-100 text-gray-700 text-sm font-medium 
+                          hover:bg-gray-200 transition shadow-sm">
                     <i class="fas fa-arrow-left"></i> Dashboard
                 </a>
-                <button class="btn btn-light" id="btn-actualizar">
+                <button id="btn-actualizar" 
+                        class="flex items-center gap-2 px-5 py-3 rounded-xl 
+                               bg-gradient-to-r from-indigo-600 to-purple-600 
+                               text-white text-sm font-semibold 
+                               shadow-md hover:shadow-lg transition">
                     <i class="fas fa-sync-alt"></i> Actualizar
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Grid de vehículos -->
-    <div id="vehiculos-container">
-        <div class="text-center py-5">
-            <i class="fas fa-spinner fa-spin fa-2x text-primary mb-3"></i>
-            <p class="text-muted">Cargando vehículos en cochera...</p>
+    <!-- Contenedor vehículos -->
+    <div id="vehiculos-container" class="min-h-[250px] flex items-center justify-center">
+        <div class="text-center py-10">
+            <i class="fas fa-spinner fa-spin text-indigo-500 text-3xl mb-3"></i>
+            <p class="text-gray-500">Cargando vehículos en cochera...</p>
         </div>
     </div>
 </div>
 
-<!-- Modal para registrar salida rápida -->
-<div class="modal fade" id="modalRegistrarSalida" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-arrow-left text-danger"></i> 
-                    Registrar Salida
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div id="salida-vehiculo-info">
-                    <!-- Se llena dinámicamente -->
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Observaciones (opcional)</label>
-                    <textarea class="form-control" id="salida-observaciones" rows="3" 
-                              placeholder="Notas sobre la salida..."></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    Cancelar
-                </button>
-                <button type="button" class="btn btn-danger" id="btn-confirmar-salida">
-                    <i class="fas fa-arrow-left"></i> Confirmar Salida
-                </button>
-            </div>
+<!-- Modal Registrar Salida -->
+<div id="modalRegistrarSalida" class="hidden fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+    <div class="bg-white rounded-2xl shadow-xl max-w-lg w-full p-6 animate-fadeIn">
+        <div class="flex justify-between items-center mb-4">
+            <h5 class="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <i class="fas fa-arrow-left text-red-500"></i> Registrar Salida
+            </h5>
+            <button onclick="document.getElementById('modalRegistrarSalida').classList.add('hidden')" 
+                    class="text-gray-400 hover:text-gray-600 text-lg">
+                ✖
+            </button>
+        </div>
+        <div id="salida-vehiculo-info" class="space-y-3"></div>
+        <div class="mt-3">
+            <label class="text-sm font-medium text-gray-600">Observaciones (opcional)</label>
+            <textarea id="salida-observaciones" rows="3"
+                      placeholder="Notas sobre la salida..."
+                      class="w-full border border-gray-300 rounded-xl px-3 py-2 focus:ring-2 focus:ring-indigo-500"></textarea>
+        </div>
+        <div class="flex justify-end gap-3 mt-5">
+            <button onclick="document.getElementById('modalRegistrarSalida').classList.add('hidden')" 
+                    class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-xl transition">
+                Cancelar
+            </button>
+            <button id="btn-confirmar-salida" 
+                    class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-xl shadow transition">
+                <i class="fas fa-arrow-left"></i> Confirmar
+            </button>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block extra_js %}
-<script>
-$(document).ready(function() {
-    let vehiculosData = [];
-    let vehiculoSeleccionado = null;
-
-    // Cargar datos inicialmente
-    cargarVehiculos();
-
-    // Actualización automática cada 30 segundos
-    setInterval(cargarVehiculos, 30000);
-
-    // Actualización manual
-    $('#btn-actualizar').click(function() {
-        $(this).html('<i class="fas fa-spinner fa-spin"></i> Actualizando...');
-        cargarVehiculos();
-        setTimeout(() => {
-            $(this).html('<i class="fas fa-sync-alt"></i> Actualizar');
-        }, 1500);
-    });
-
-    // Filtros en tiempo real
-    $('#filtro-buscar, #filtro-tipo').on('input change', function() {
-        filtrarVehiculos();
-    });
-
-    function cargarVehiculos() {
-        $.ajax({
-            url: '{% url "vigilante_vehiculos_cochera" %}',
-            type: 'GET',
-            success: function(response) {
-                vehiculosData = response.vehiculos_en_cochera || [];
-                actualizarEstadisticas(response);
-                mostrarVehiculos(vehiculosData);
-            },
-            error: function(xhr) {
-                console.error('Error al cargar vehículos:', xhr.responseText);
-                mostrarError();
-            }
-        });
-    }
-
-    function actualizarEstadisticas(data) {
-        const total = data.total || 0;
-        const propietarios = vehiculosData.filter(v => !v.es_prestamo).length;
-        const prestamos = vehiculosData.filter(v => v.es_prestamo).length;
-
-        $('#total-vehiculos').text(total);
-        $('#vehiculos-propietarios').text(propietarios);
-        $('#vehiculos-prestamos').text(prestamos);
-    }
-
-    function mostrarVehiculos(vehiculos) {
-        if (vehiculos.length === 0) {
-            mostrarEstadoVacio();
-            return;
-        }
-
-        let html = '<div class="vehicle-grid">';
-        
-        vehiculos.forEach(function(vehiculo) {
-            const tiempoPartes = vehiculo.tiempo_estacionado.split(':');
-            const horas = parseInt(tiempoPartes[0]) || 0;
-            const minutos = parseInt(tiempoPartes[1]) || 0;
-            
-            let tiempoTexto = '';
-            if (horas > 0) {
-                tiempoTexto = `${horas}h ${minutos}m`;
-            } else {
-                tiempoTexto = `${minutos} minutos`;
-            }
-
-            const cardClass = vehiculo.es_prestamo ? 'vehicle-card prestamo' : 'vehicle-card';
-            const statusClass = vehiculo.es_prestamo ? 'status-prestamo' : 'status-propietario';
-            const statusText = vehiculo.es_prestamo ? 'PRÉSTAMO' : 'PROPIETARIO';
-            const statusIcon = vehiculo.es_prestamo ? 'fa-handshake' : 'fa-user-check';
-
-            html += `
-                <div class="${cardClass}">
-                    <div class="vehicle-header">
-                        <div class="placa-badge">${vehiculo.placa}</div>
-                        <span class="badge-status ${statusClass}">
-                            <i class="fas ${statusIcon}"></i> ${statusText}
-                        </span>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-12">
-                            <h6 class="mb-2">
-                                <i class="fas fa-user text-primary"></i> 
-                                ${vehiculo.usuario_autorizado}
-                            </h6>
-                            ${vehiculo.es_prestamo ? `
-                                <p class="mb-1 small text-muted">
-                                    <i class="fas fa-info-circle"></i> 
-                                    Propietario: ${vehiculo.propietario}
-                                </p>
-                            ` : ''}
-                        </div>
-                    </div>
-
-                    <div class="tiempo-estacionado">
-                        <div class="tiempo-numero">${tiempoTexto}</div>
-                        <small class="text-muted">Tiempo estacionado</small>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-2">
-                        <small class="text-muted">
-                            <i class="fas fa-clock"></i> 
-                            Entrada: ${vehiculo.hora_entrada}
-                        </small>
-                        ${horas >= 8 ? 
-                            '<span class="badge bg-warning text-dark">Estacionamiento prolongado</span>' : 
-                            ''
-                        }
-                    </div>
-
-                    <div class="vehicle-actions">
-                        <button class="btn btn-danger btn-action-small" 
-                                onclick="prepararSalida('${vehiculo.placa}', '${vehiculo.usuario_autorizado}')">
-                            <i class="fas fa-arrow-left"></i> Registrar Salida
-                        </button>
-                        <button class="btn btn-info btn-action-small" 
-                                onclick="verDetalles('${vehiculo.placa}')">
-                            <i class="fas fa-info"></i> Detalles
-                        </button>
-                        ${vehiculo.es_prestamo ? `
-                            <button class="btn btn-warning btn-action-small" 
-                                    onclick="verPrestamo('${vehiculo.placa}')">
-                                <i class="fas fa-handshake"></i> Préstamo
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-            `;
-        });
-
-        html += '</div>';
-        $('#vehiculos-container').html(html);
-    }
-
-    function mostrarEstadoVacio() {
-        const html = `
-            <div class="empty-state">
-                <i class="fas fa-parking fa-4x mb-4"></i>
-                <h4>Cochera Vacía</h4>
-                <p class="mb-4">No hay vehículos estacionados en este momento</p>
-                <div>
-                    <a href="{% url 'camara_vigilante' %}" class="btn btn-primary me-2">
-                        <i class="fas fa-camera"></i> Detectar Entrada
-                    </a>
-                    <a href="{% url 'registro_acceso_vigilante' %}" class="btn btn-outline-primary">
-                        <i class="fas fa-plus"></i> Registrar Manualmente
-                    </a>
-                </div>
-            </div>
-        `;
-        $('#vehiculos-container').html(html);
-    }
-
-    function mostrarError() {
-        const html = `
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle fa-4x text-warning mb-4"></i>
-                <h4>Error de Carga</h4>
-                <p class="mb-4">No se pudieron cargar los vehículos en cochera</p>
-                <button class="btn btn-primary" onclick="cargarVehiculos()">
-                    <i class="fas fa-redo"></i> Reintentar
-                </button>
-            </div>
-        `;
-        $('#vehiculos-container').html(html);
-    }
-
-    function filtrarVehiculos() {
-        const buscar = $('#filtro-buscar').val().toLowerCase().trim();
-        const tipo = $('#filtro-tipo').val();
-
-        let vehiculosFiltrados = vehiculosData;
-
-        // Filtro por tipo
-        if (tipo) {
-            if (tipo === 'propietario') {
-                vehiculosFiltrados = vehiculosFiltrados.filter(v => !v.es_prestamo);
-            } else if (tipo === 'prestamo') {
-                vehiculosFiltrados = vehiculosFiltrados.filter(v => v.es_prestamo);
-            }
-        }
-
-        // Filtro por búsqueda
-        if (buscar) {
-            vehiculosFiltrados = vehiculosFiltrados.filter(v => 
-                v.placa.toLowerCase().includes(buscar) ||
-                v.propietario.toLowerCase().includes(buscar) ||
-                v.usuario_autorizado.toLowerCase().includes(buscar)
-            );
-        }
-
-        mostrarVehiculos(vehiculosFiltrados);
-    }
-
-    // Funciones globales para los botones
-    window.prepararSalida = function(placa, usuario) {
-        vehiculoSeleccionado = placa;
-        
-        const html = `
-            <div class="alert alert-info">
-                <h6><i class="fas fa-car"></i> Vehículo: <strong>${placa}</strong></h6>
-                <p class="mb-0"><i class="fas fa-user"></i> Usuario: ${usuario}</p>
-            </div>
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                <strong>¿Estás seguro de registrar la salida?</strong>
-                <br><small>Esta acción no se puede deshacer.</small>
-            </div>
-        `;
-        
-        $('#salida-vehiculo-info').html(html);
-        $('#salida-observaciones').val('');
-        $('#modalRegistrarSalida').modal('show');
-    };
-
-    window.verDetalles = function(placa) {
-        // Buscar vehículo en los datos
-        const vehiculo = vehiculosData.find(v => v.placa === placa);
-        if (vehiculo) {
-            Swal.fire({
-                title: `Detalles - ${placa}`,
-                html: `
-                    <div class="text-start">
-                        <p><strong>Usuario autorizado:</strong> ${vehiculo.usuario_autorizado}</p>
-                        <p><strong>Propietario:</strong> ${vehiculo.propietario}</p>
-                        <p><strong>Hora de entrada:</strong> ${vehiculo.hora_entrada}</p>
-                        <p><strong>Tiempo estacionado:</strong> ${vehiculo.tiempo_estacionado}</p>
-                        <p><strong>Tipo:</strong> ${vehiculo.es_prestamo ? 'Préstamo' : 'Propietario'}</p>
-                    </div>
-                `,
-                icon: 'info',
-                confirmButtonText: 'Cerrar'
-            });
-        }
-    };
-
-    window.verPrestamo = function(placa) {
-        Swal.fire({
-            title: 'Información del Préstamo',
-            html: `
-                <div class="text-start">
-                    <p>Detalles del préstamo para el vehículo <strong>${placa}</strong></p>
-                    <p><em>Esta función está en desarrollo...</em></p>
-                </div>
-            `,
-            icon: 'info'
-        });
-    };
-
-    // Confirmar salida
-    $('#btn-confirmar-salida').click(function() {
-        if (!vehiculoSeleccionado) return;
-
-        const observaciones = $('#salida-observaciones').val();
-        
-        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Registrando...');
-
-        const formData = new FormData();
-        formData.append('placa_detectada', vehiculoSeleccionado);
-        formData.append('tipo_acceso', 'salida');
-        formData.append('observaciones', observaciones || 'Salida registrada desde lista de cochera');
-        formData.append('confianza_deteccion', '100');
-        formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
-
-        $.ajax({
-            url: '{% url "vigilante_registrar_acceso" %}',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function(response) {
-                if (response.success) {
-                    $('#modalRegistrarSalida').modal('hide');
-                    
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Salida registrada!',
-                        text: response.mensaje,
-                        timer: 2000
-                    });
-
-                    // Recargar vehículos
-                    setTimeout(cargarVehiculos, 1000);
-                } else {
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: response.mensaje || 'Error desconocido'
-                    });
-                }
-            },
-            error: function(xhr) {
-                let errorMsg = 'Error de comunicación';
-                try {
-                    const error = JSON.parse(xhr.responseText);
-                    errorMsg = error.error || 'Error desconocido';
-                } catch (e) {
-                    errorMsg = 'Error del servidor';
-                }
-                
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error al registrar salida',
-                    text: errorMsg
-                });
-            },
-            complete: function() {
-                $('#btn-confirmar-salida').prop('disabled', false)
-                    .html('<i class="fas fa-arrow-left"></i> Confirmar Salida');
-            }
-        });
-    });
-
-    // Limpiar modal al cerrarse
-    $('#modalRegistrarSalida').on('hidden.bs.modal', function() {
-        vehiculoSeleccionado = null;
-        $('#salida-observaciones').val('');
-    });
-
-    // Agregar CSRF token para las peticiones AJAX
-    $.ajaxSetup({
-        beforeSend: function(xhr, settings) {
-            if (!this.crossDomain) {
-                xhr.setRequestHeader("X-CSRFToken", $('[name=csrfmiddlewaretoken]').val());
-            }
-        }
-    });
-
-    // Añadir token CSRF al DOM si no existe
-    if (!$('[name=csrfmiddlewaretoken]').length) {
-        $('body').append('<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">');
-    }
-});
-</script>
 {% endblock %}
