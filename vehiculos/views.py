@@ -22,6 +22,12 @@ from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 import json
 import logging
+import cv2
+from django.http import StreamingHttpResponse
+from .yolo_service import annotate_frame
+from ultralytics import YOLO
+from pathlib import Path
+import time
 
 from .serializers import (
     VehiculoSerializer, 
@@ -31,10 +37,6 @@ from .serializers import (
 )
 from .models import Vehiculo, PrestamoVehiculo, RegistroAcceso
 from .plate_detection import detect_plate_from_upload, CameraManager
-
-from django.http import StreamingHttpResponse
-from django.shortcuts import render
-from .camera import VideoCamera
 
 logger = logging.getLogger(__name__)
 
@@ -733,15 +735,93 @@ def vehiculos_cochera_vigilante(request):
     })
 
 # =============== Camara con OpenCV ===============
-def gen(camera):
+# Clases personalizadas (ajústalas según tu dataset)
+CLASES_ES = {
+    0: "carro",
+    1: "placa",
+    2: "bajaj"
+}
+
+# Cargar el modelo solo una vez
+def cargar_modelo():
+    ruta = Path("best.pt")
+    if ruta.exists():
+        print("✅ Modelo personalizado:", ruta.resolve())
+        model = YOLO(str(ruta))
+    else:
+        print("⚠️ No se encontró best.pt, usando yolov8n.pt")
+        model = YOLO("yolov8n.pt")
+    return model
+
+# Función para generar los frames en tiempo real
+def gen_video(camera_index=1):
+    model = cargar_modelo()
+    cap = cv2.VideoCapture(camera_index)
+    if not cap.isOpened():
+        print("❌ No se pudo abrir la cámara.")
+        return
+
+    confianza = 0.25
+    t0 = time.time()
+    frames = 0
+
     while True:
-        frame = camera.get_frame()
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Detección YOLO
+        results = model(frame, conf=confianza, imgsz=640, verbose=False)
+        vis = results[0].plot()  # Dibujar cajas
+
+        # FPS
+        frames += 1
+        if frames % 10 == 0:
+            now = time.time()
+            fps = 10.0 / (now - t0)
+            t0 = now
+        else:
+            fps = None
+
+        txt = f"conf={confianza:.2f}"
+        if fps:
+            txt += f" | fps~{fps:.1f}"
+        cv2.putText(vis, txt, (10, 26), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (40,255,40), 2)
+
+        # Convertir el frame a bytes para el streaming
+        ret, buffer = cv2.imencode('.jpg', vis)
+        frame_bytes = buffer.tobytes()
         yield (b'--frame\r\n'
-               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+               b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+
+    cap.release()
 
 def video_feed(request):
-    return StreamingHttpResponse(gen(VideoCamera()),
-                                 content_type='multipart/x-mixed-replace; boundary=frame')
+    return StreamingHttpResponse(
+        gen_video(camera_index=1),
+        content_type='multipart/x-mixed-replace; boundary=frame'
+    )
 
 def monitor_view(request):
     return render(request, 'vehiculos/camara_vigilante.html')
+
+
+def camera_status(request):
+    """Endpoint simple que intenta abrir la cámara brevemente y devuelve estado JSON.
+    No inicia un stream continuo; es solo para estado en UI.
+    """
+    try:
+        cam = VideoCamera()
+        active = cam.video is not None and cam.grabbed
+        index = getattr(cam, 'index', None)
+        backend = getattr(cam, 'backend', None)
+        # release if it was opened
+        try:
+            if cam.video is not None:
+                cam.video.release()
+        except Exception:
+            pass
+
+        return JsonResponse({'active': bool(active), 'index': index, 'backend': str(backend)})
+    except Exception as e:
+        return JsonResponse({'active': False, 'error': str(e)})

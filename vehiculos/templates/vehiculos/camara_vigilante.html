@@ -23,21 +23,9 @@
                         <div id="detection-overlay" class="detection-overlay"></div>
 
                         <!-- Estado cámara -->
-                        <div id="camera-status" class="absolute top-4 right-4 px-4 py-2 rounded-full text-sm font-semibold shadow-md bg-red-500">
+                        {% comment %} <div id="camera-status" class="absolute top-4 right-4 px-4 py-2 rounded-full text-sm font-semibold shadow-md bg-red-500">
                             Cámara inactiva
-                        </div>
-                    </div>
-
-                    <!-- Botones -->
-                    <div class="mt-6 flex flex-wrap gap-4 justify-center">
-                        <button id="capture-btn" disabled
-                            class="btn-capture px-6 py-3 rounded-full bg-gradient-to-r from-emerald-500 to-sky-600 text-white font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition hover:scale-105">
-                            📸 Capturar
-                        </button>
-                        <button id="clear-btn"
-                            class="btn-secondary px-6 py-3 rounded-full bg-slate-100 text-slate-700 font-medium shadow hover:bg-slate-200 transition">
-                            🧹 Limpiar
-                        </button>
+                        </div> {% endcomment %}
                     </div>
                 </div>
 
@@ -79,4 +67,69 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Poll camera status every 2 seconds and update UI
+async function checkCamera() {
+    try {
+        const res = await fetch("{% url 'camera_status' %}");
+        const data = await res.json();
+        const el = document.getElementById('camera-status');
+        if (!el) return;
+        if (data.active) {
+            el.textContent = 'Cámara activa';
+            el.classList.remove('bg-red-500');
+            el.classList.add('bg-emerald-500');
+        } else {
+            el.textContent = 'Cámara inactiva';
+            el.classList.remove('bg-emerald-500');
+            el.classList.add('bg-red-500');
+        }
+    } catch (err) {
+        console.error('Error checking camera status', err);
+    }
+}
+
+setInterval(checkCamera, 2000);
+checkCamera();
+</script>
+
+<div class="camera-card">
+  <h3>Vista de cámara</h3>
+  <!-- Simple MJPEG -->
+  <img id="mjpeg-stream" src="{% url 'video_feed' %}" alt="Camera stream" style="width:100%; max-width:900px; border-radius:8px;" />
+
+  <div style="margin-top:10px;">
+    <button id="capture-btn" class="btn">Capturar</button>
+    <button id="clear-btn" class="btn">Limpiar</button>
+  </div>
+
+  <div id="detection-results" style="margin-top:12px;">
+    <!-- Aquí puedes actualizar resultados vía JS si implementas un endpoint que devuelva JSON -->
+    No se han detectado placas todavía...
+  </div>
+</div>
+
+<script>
+  // descarga la imagen actual del stream (cliente) al pulsar Capturar
+  document.getElementById('capture-btn').addEventListener('click', function(){
+    const img = document.getElementById('mjpeg-stream');
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth || 640;
+    canvas.height = img.naturalHeight || 480;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg');
+    // crear enlace para descargar
+    const a = document.createElement('a');
+    a.href = dataUrl;
+    a.download = 'captura.jpg';
+    a.click();
+  });
+  document.getElementById('clear-btn').addEventListener('click', function(){
+    document.getElementById('detection-results').innerText = 'No se han detectado placas todavía...';
+  });
+</script>
 {% endblock %}

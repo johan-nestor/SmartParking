@@ -32,6 +32,7 @@ urlpatterns = [
     # ===== CAMARA =====
     path('monitor/', views.monitor_view, name='monitor'),
     path('video_feed/', views.video_feed, name='video_feed'),
+    path('video_feed_status/', views.camera_status, name='camera_status'),
     
     # URLs del router
     path('', include(router.urls)),
