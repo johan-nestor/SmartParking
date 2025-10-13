@@ -28,6 +28,10 @@ urlpatterns = [
     path('api/vigilante/registrar-acceso/', views.vigilante_registrar_acceso, name='vigilante_registrar_acceso'),
     path('api/vigilante/vehiculos-cochera/', views.vigilante_vehiculos_cochera, name='vigilante_vehiculos_cochera'),
     path('api/vigilante/buscar-vehiculo/', views.vigilante_buscar_vehiculo, name='vigilante_buscar_vehiculo'),
+
+    # ===== CAMARA =====
+    path('monitor/', views.monitor_view, name='monitor'),
+    path('video_feed/', views.video_feed, name='video_feed'),
     
     # URLs del router
     path('', include(router.urls)),

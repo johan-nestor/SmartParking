@@ -32,6 +32,10 @@ from .serializers import (
 from .models import Vehiculo, PrestamoVehiculo, RegistroAcceso
 from .plate_detection import detect_plate_from_upload, CameraManager
 
+from django.http import StreamingHttpResponse
+from django.shortcuts import render
+from .camera import VideoCamera
+
 logger = logging.getLogger(__name__)
 
 # Vistas existentes para renderizado HTML
@@ -727,3 +731,17 @@ def vehiculos_cochera_vigilante(request):
         'usuario': request.user,
         'titulo': 'Vehículos en Cochera'
     })
+
+# =============== Camara con OpenCV ===============
+def gen(camera):
+    while True:
+        frame = camera.get_frame()
+        yield (b'--frame\r\n'
+               b'Content-Type: image/jpeg\r\n\r\n' + frame + b'\r\n\r\n')
+
+def video_feed(request):
+    return StreamingHttpResponse(gen(VideoCamera()),
+                                 content_type='multipart/x-mixed-replace; boundary=frame')
+
+def monitor_view(request):
+    return render(request, 'vehiculos/camara_vigilante.html')

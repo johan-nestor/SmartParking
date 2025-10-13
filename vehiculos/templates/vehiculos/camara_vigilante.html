@@ -18,7 +18,7 @@
                 <!-- Video -->
                 <div class="flex-1 relative w-full">
                     <div class="video-container bg-slate-900 rounded-xl shadow-lg overflow-hidden relative">
-                        <video id="video-stream" autoplay playsinline muted class="w-full h-72 object-cover rounded-xl"></video>
+                        <img src="{% url 'video_feed' %}" width="100%" class="rounded-xl shadow-lg" />
                         <canvas id="canvas" class="hidden"></canvas>
                         <div id="detection-overlay" class="detection-overlay"></div>
 
