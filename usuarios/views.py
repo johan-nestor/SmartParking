@@ -54,24 +54,17 @@ def landing_page(request):
 
 # Registro de usuario
 def registro(request):
-    if request.method == "POST":
-        form = RegistroUsuarioForm(request.POST, request.FILES)  # importante: incluir archivos
+    if request.method == 'POST':
+        form = RegistroUsuarioForm(request.POST, request.FILES)
         if form.is_valid():
-            user = form.save()  # crea usuario en auth_user
-
-            # Guardar datos extra en perfil
-            if hasattr(user, 'perfil'):
-                user.perfil.telefono = form.cleaned_data.get('telefono')
-                user.perfil.direccion = form.cleaned_data.get('direccion')
-                if form.cleaned_data.get('foto'):
-                    user.perfil.foto = form.cleaned_data.get('foto')
-                user.perfil.save()
-
-            login(request, user)  # iniciar sesión directo
-            return redirect('dashboard')
+            user = form.save()
+            login(request, user)
+            messages.success(request, f"¡Bienvenido, {user.get_full_name()}!")
+            return redirect('dashboard')  # o donde quieras
     else:
         form = RegistroUsuarioForm()
-    return render(request, "usuarios/registro.html", {"form": form})
+    
+    return render(request, 'usuarios/registro.html', {'form': form})
 
 # Login de usuario
 def login_view(request):

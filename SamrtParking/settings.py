@@ -67,9 +67,12 @@ MIDDLEWARE = [
 
 # Configuración de CORS
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",  # Puerto por defecto de Vite
-    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
+    "http://localhost:8000",
 ]
+
+SESSION_COOKIE_SAMESITE = "Lax"
+CSRF_COOKIE_SAMESITE = "Lax"
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -152,14 +155,15 @@ AUTH_PASSWORD_VALIDATORS = []
     #     'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     # },
 
-
+CAMERA_SOURCE = "rtsp://admin:Udh%402025@192.168.22.254:554/cam/realmonitor?channel=1&subtype=0"
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Lima'
+USE_TZ = True
 
 USE_I18N = True
 
@@ -183,7 +187,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configuración REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 }

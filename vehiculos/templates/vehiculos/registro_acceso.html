@@ -1,137 +1,153 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block title %}Registrar Acceso - Smart Parking{% endblock %}
+{% block title %}Registrar Acceso - SmartParking{% endblock %}
 
 {% block content %}
-<div class="min-h-screen bg-gradient-to-r from-sky-50 via-indigo-50 to-slate-100 py-8 px-4">
-    <!-- Header -->
-    <div class="max-w-7xl mx-auto mb-6 flex flex-col md:flex-row md:items-center md:justify-between">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-800 flex items-center gap-2">📝 Registrar Acceso</h1>
-            <p class="text-slate-500">Entrada y salida de vehículos</p>
+<div class="space-y-8">
+
+  <!-- Header -->
+  <div class="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-white/50 p-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold text-slate-800 flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-sky-500 rounded-xl flex items-center justify-center shadow-md">
+            <span class="text-white text-xl">P</span>
+          </div>
+          Registrar Acceso
+        </h1>
+        <p class="text-slate-600 mt-1">Entrada y salida de vehículos</p>
+      </div>
+      <div class="flex gap-3">
+        <a href="{% url 'dashboard_vigilante' %}" 
+           class="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-slate-100 to-slate-200 text-slate-700 font-medium hover:from-slate-200 hover:to-slate-300 transition-all shadow-sm hover:shadow">
+          Panel Principal
+        </a>
+        <a href="{% url 'camara_vigilante' %}" 
+           class="flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-medium hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-md hover:shadow-lg">
+          Detectar Placa
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Formulario Principal -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="lg:col-span-2">
+      <div class="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-white/50 p-6">
+
+        <!-- Alerta de Detección Automática -->
+        <div id="detection-alert" class="hidden mb-6 p-5 bg-gradient-to-r from-blue-50 to-sky-50 border-2 border-blue-200 rounded-2xl flex items-center gap-4 shadow-sm">
+          <div class="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center shadow-md">
+            <span class="text-white text-2xl">Search</span>
+          </div>
+          <div>
+            <p class="font-bold text-blue-700">Placa detectada automáticamente</p>
+            <p class="text-sm text-slate-600">Confianza: <span id="detection-confidence" class="font-mono font-bold">--</span>%</p>
+          </div>
         </div>
-        <div class="flex gap-2 mt-4 md:mt-0">
-            <a href="{% url 'dashboard_vigilante' %}" 
-               class="px-4 py-2 rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 transition">
-               ⬅️ Dashboard
-            </a>
-            <a href="{% url 'camara_vigilante' %}" 
-               class="px-4 py-2 rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition">
-               📷 Detectar Placa
-            </a>
-        </div>
+
+        <h2 class="text-xl font-bold text-slate-800 mb-6 flex items-center gap-3">
+          <div class="w-9 h-9 bg-gradient-to-br from-emerald-400 to-sky-500 rounded-xl flex items-center justify-center shadow-md">
+            <span class="text-white text-lg"></span>
+          </div>
+          Nuevo Registro de Acceso
+        </h2>
+
+        <form id="form-registro-acceso" method="POST" action="{% url 'registrar_acceso_manual' %}" class="space-y-6">
+          {% csrf_token %}
+
+          <!-- Placa -->
+          <div>
+            <label for="placa" class="flex items-center gap-2 text-slate-700 font-medium mb-2">
+              <span class="text-xl"></span> Placa del Vehículo
+            </label>
+            <input type="text" 
+                   id="placa" 
+                   name="placa_detectada"
+                   class="w-full px-5 py-4 text-lg font-mono font-bold tracking-widest uppercase rounded-2xl border border-slate-300 focus:ring-2 focus:ring-emerald-400 focus:outline-none transition-all placeholder:text-slate-400"
+                   placeholder="ABC-123" 
+                   maxlength="8" 
+                   required>
+          </div>
+
+          <!-- Tipo de Acceso -->
+          <div>
+            <label for="tipo_acceso" class="flex items-center gap-2 text-slate-700 font-medium mb-2">
+              <span class="text-xl"></span> Tipo de Acceso
+            </label>
+            <select id="tipo_acceso" 
+                    name="tipo_acceso" 
+                    required
+                    class="w-full px-5 py-4 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-emerald-400 focus:outline-none transition-all">
+              <option value="">-- Seleccionar tipo --</option>
+              <option value="entrada">Entrada</option>
+              <option value="salida">Salida</option>
+            </select>
+          </div>
+
+          <!-- Info del Vehículo (dinámico) -->
+          <div id="vehiculo-info" class="hidden p-5 bg-gradient-to-r from-emerald-50 to-sky-50 rounded-2xl border border-emerald-200 shadow-sm">
+            <p class="text-sm font-medium text-slate-700">Información del vehículo:</p>
+            <div id="vehiculo-detalles" class="mt-2 space-y-1 text-sm"></div>
+          </div>
+
+          <!-- Observaciones -->
+          <div>
+            <label for="observaciones" class="flex items-center gap-2 text-slate-700 font-medium mb-2">
+              <span class="text-xl"></span> Observaciones (opcional)
+            </label>
+            <textarea id="observaciones" 
+                      name="observaciones" 
+                      rows="3"
+                      class="w-full px-5 py-4 rounded-2xl border border-slate-300 focus:ring-2 focus:ring-emerald-400 focus:outline-none transition-all resize-none placeholder:text-slate-400"
+                      placeholder="Ej: Vehículo con vidrios polarizados, conductor con gorra..."></textarea>
+          </div>
+
+          <!-- Confianza (oculta) -->
+          <input type="hidden" id="confianza_deteccion" name="confianza_deteccion" value="0">
+
+          <!-- Botón Registrar -->
+          <div class="pt-4">
+            <button type="submit" 
+                    id="btn-registrar"
+                    class="w-full py-4 rounded-2xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-bold text-lg hover:from-emerald-600 hover:to-emerald-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98]">
+              Registrar Acceso
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
 
-    <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Formulario -->
-        <div class="lg:col-span-2">
-            <div class="bg-white shadow-lg rounded-xl p-6">
-                
-                <!-- Alerta de detección -->
-                <div id="detection-alert" class="hidden mb-4 p-4 border-2 border-blue-400 bg-blue-50 rounded-lg flex items-center gap-3">
-                    <span class="text-blue-600 text-xl">🔍</span>
-                    <div>
-                        <p class="font-semibold text-blue-700">Placa detectada automáticamente</p>
-                        <p class="text-sm text-slate-600">Confianza: <span id="detection-confidence">--</span>%</p>
-                    </div>
-                </div>
-
-                <h4 class="text-xl font-semibold text-slate-800 mb-4 flex items-center gap-2">
-                    🗂️ Nuevo Registro de Acceso
-                </h4>
-
-                <form id="form-registro-acceso" class="space-y-4">
-                    {% csrf_token %}
-
-                    <!-- Placa -->
-                    <div>
-                        <label for="placa" class="block font-medium text-slate-700 mb-1">🚗 Placa del Vehículo</label>
-                        <input type="text" id="placa" name="placa_detectada"
-                               class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg font-bold tracking-widest uppercase focus:ring-2 focus:ring-emerald-400 focus:outline-none"
-                               placeholder="ABC-123" maxlength="8" required>
-                        <p class="text-sm text-slate-500 mt-1">Ingresa la placa o usa el sistema de detección automática</p>
-                    </div>
-
-                    <!-- Tipo acceso -->
-                    <div>
-                        <label for="tipo_acceso" class="block font-medium text-slate-700 mb-1">🔄 Tipo de Acceso</label>
-                        <select id="tipo_acceso" name="tipo_acceso" required
-                                class="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-emerald-400">
-                            <option value="">-- Seleccionar --</option>
-                            <option value="entrada">🚗 Entrada</option>
-                            <option value="salida">🚙 Salida</option>
-                        </select>
-                    </div>
-
-                    <!-- Info vehículo -->
-                    <div id="vehiculo-info" class="hidden rounded-lg p-4 border mt-2"></div>
-
-                    <!-- Observaciones -->
-                    <div>
-                        <label for="observaciones" class="block font-medium text-slate-700 mb-1">💬 Observaciones</label>
-                        <textarea id="observaciones" name="observaciones" rows="3"
-                                  class="w-full rounded-lg border border-slate-300 px-4 py-3 focus:ring-2 focus:ring-emerald-400"
-                                  placeholder="Notas adicionales..."></textarea>
-                    </div>
-
-                    <!-- Confianza -->
-                    <input type="hidden" id="confianza_deteccion" name="confianza_deteccion" value="0">
-
-                    <!-- Botón -->
-                    <div class="text-center">
-                        <button type="submit" id="btn-registrar"
-                                class="w-full py-3 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition">
-                            💾 Registrar Acceso
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Columna lateral -->
-        <div class="space-y-6">
-            <!-- Stats -->
-            <div class="bg-white shadow-md rounded-xl p-4">
-                <h6 class="font-semibold text-slate-700 mb-3">📊 Estadísticas de Hoy</h6>
-                <div class="grid grid-cols-2 text-center">
-                    <div>
-                        <p id="entradas-hoy" class="text-2xl font-bold text-emerald-600">--</p>
-                        <p class="text-slate-500 text-sm">Entradas</p>
-                    </div>
-                    <div>
-                        <p id="salidas-hoy" class="text-2xl font-bold text-red-500">--</p>
-                        <p class="text-slate-500 text-sm">Salidas</p>
-                    </div>
-                </div>
-                <hr class="my-3">
-                <div class="text-center">
-                    <p id="vehiculos-cochera" class="text-xl font-bold text-blue-600">--</p>
-                    <p class="text-slate-500 text-sm">En cochera</p>
-                </div>
-            </div>
-
-            <!-- Instrucciones -->
-            <div class="bg-white shadow-md rounded-xl p-4">
-                <h6 class="font-semibold text-slate-700 mb-3">💡 Instrucciones</h6>
-                <ul class="text-sm text-slate-600 space-y-2">
-                    <li>✅ Ingresa la placa manualmente o usa detección</li>
-                    <li>✅ El sistema verificará si existe el vehículo</li>
-                    <li>✅ Selecciona entrada o salida</li>
-                    <li>✅ Añade observaciones si es necesario</li>
-                </ul>
-            </div>
-
-            <!-- Accesos recientes -->
-            <div class="bg-white shadow-md rounded-xl p-4">
-                <h6 class="font-semibold text-slate-700 mb-3">🕒 Accesos Recientes</h6>
-                <div id="accesos-recientes" class="max-h-56 overflow-y-auto text-sm text-slate-600">
-                    <div class="text-center text-slate-400 py-3">
-                        ⏳ Cargando...
-                    </div>
-                </div>
-            </div>
-        </div>
+    <!-- Panel Lateral: Instrucciones -->
+    <div class="lg:col-span-1">
+      <div class="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl border border-white/50 p-6 space-y-5">
+        <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+          <div class="w-8 h-8 bg-gradient-to-br from-purple-400 to-pink-500 rounded-xl flex items-center justify-center shadow-md">
+            <span class="text-white text-sm">i</span>
+          </div>
+          Instrucciones
+        </h3>
+        <ul class="space-y-3 text-sm text-slate-600">
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-600 mt-0.5"></span>
+            <span>Ingresa la placa en <strong>mayúsculas</strong> y sin espacios.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-600 mt-0.5"></span>
+            <span>Selecciona <strong>Entrada</strong> o <strong>Salida</strong>.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-600 mt-0.5"></span>
+            <span>Si usas la cámara, la placa se rellenará automáticamente.</span>
+          </li>
+          <li class="flex items-start gap-2">
+            <span class="text-emerald-600 mt-0.5"></span>
+            <span>Agrega observaciones si es necesario.</span>
+          </li>
+        </ul>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}

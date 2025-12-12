@@ -3,37 +3,63 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SmartParking</title>
+    <title>{% block title %}SmartParking{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
 </head>
-<body class="flex flex-col min-h-screen bg-gradient-to-br from-purple-50 via-emerald-50 to-sky-50 text-slate-800">
+<body class="flex flex-col min-h-screen bg-gradient-to-br from-purple-50 via-emerald-50 to-sky-50 text-slate-800 antialiased">
+
     <!-- Navbar -->
-    <nav class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-xl backdrop-blur-sm">
+    <nav class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-white shadow-2xl backdrop-blur-xl border-b border-slate-700/50 sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex items-center justify-between h-16">
+
                 <!-- Logo -->
-                <a href="{% url 'dashboard' %}" class="text-2xl font-bold tracking-wide hover:text-emerald-400 transition-all duration-300 hover:scale-105 flex items-center gap-2">
-                    <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
-                        <span class="text-white font-bold text-lg">S</span>
+                <a href="{% url 'dashboard' %}" 
+                   class="group flex items-center gap-3 text-2xl font-bold tracking-tight transition-all duration-300 hover:scale-105 focus-visible:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 rounded-lg">
+                    <div class="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-xl flex items-center justify-center shadow-xl group-hover:shadow-emerald-500/50 transition-all duration-300">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
+                        </svg>
                     </div>
-                    SmartParking
+                    <span class="bg-gradient-to-r from-emerald-300 to-sky-300 bg-clip-text text-transparent">SmartParking</span>
                 </a>
-                <!-- Links -->
-                <div class="hidden md:flex items-center space-x-6">
+
+                <!-- Links Desktop -->
+                <div class="hidden md:flex items-center space-x-4">
                     {% if user.is_authenticated %}
-                        <a href="{% url 'logout' %}" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium shadow-lg hover:from-red-600 hover:to-red-700 hover:shadow-red-500/50 transition-all duration-300">
+                        <a href="{% url 'logout' %}" 
+                           class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg hover:from-red-600 hover:to-red-700 hover:shadow-red-500/60 transition-all duration-300 hover:scale-105 focus-visible:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                            </svg>
                             Cerrar Sesión
                         </a>
                     {% else %}
-                        <a href="{% url 'login' %}" class="hover:text-emerald-400 transition-all duration-300 font-medium px-3 py-2 rounded-lg hover:bg-slate-700/50">Ingresar</a>
-                        <a href="{% url 'registro' %}" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-emerald-500 to-emerald-600 text-white hover:from-emerald-600 hover:to-emerald-700 transition-all duration-300 font-medium shadow-lg hover:shadow-emerald-500/50 hover:scale-105">
+                        <a href="{% url 'login' %}" 
+                           class="px-4 py-2.5 rounded-xl font-medium text-slate-200 hover:text-emerald-400 hover:bg-slate-700/50 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                            Ingresar
+                        </a>
+                        <a href="{% url 'registro' %}" 
+                           class="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow-lg hover:from-emerald-600 hover:to-emerald-700 hover:shadow-emerald-500/60 transition-all duration-300 hover:scale-105 focus-visible:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"/>
+                            </svg>
                             Registrarse
                         </a>
                     {% endif %}
                 </div>
-                <!-- Mobile button -->
+
+                <!-- Mobile Menu Button -->
                 <div class="md:hidden">
-                    <button id="mobile-menu-btn" class="focus:outline-none p-2 rounded-lg hover:bg-slate-700/50 transition-all duration-300">
+                    <button id="mobile-menu-btn" 
+                            aria-label="Abrir menú" 
+                            class="p-2 rounded-lg hover:bg-slate-700/50 transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
                         </svg>
@@ -41,34 +67,73 @@
                 </div>
             </div>
         </div>
-        <!-- Mobile menu -->
-        <div id="mobile-menu" class="hidden md:hidden px-4 pb-4 space-y-2 bg-slate-800/95 text-slate-200 backdrop-blur-sm">
+
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="hidden md:hidden px-4 pb-4 space-y-3 bg-slate-800/95 backdrop-blur-xl border-t border-slate-700/50">
             {% if user.is_authenticated %}
-                <a href="{% url 'logout' %}" class="block py-2.5 px-3 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-medium shadow hover:from-red-600 hover:to-red-700 hover:shadow-red-500/50 transition-all duration-300 text-center">
+                <a href="{% url 'logout' %}" 
+                   class="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow hover:from-red-600 hover:to-red-700 transition-all duration-300">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
                     Cerrar Sesión
                 </a>
             {% else %}
-                <a href="{% url 'login' %}" class="block py-2.5 px-3 hover:text-emerald-400 hover:bg-slate-700/50 rounded-lg transition-all duration-200">Ingresar</a>
-                <a href="{% url 'registro' %}" class="block py-2.5 px-3 hover:text-emerald-400 hover:bg-slate-700/50 rounded-lg transition-all duration-200">Registrarse</a>
+                <a href="{% url 'login' %}" 
+                   class="block text-center py-3 px-4 rounded-xl font-medium text-slate-200 hover:text-emerald-400 hover:bg-slate-700/50 transition-all duration-200">
+                    Ingresar
+                </a>
+                <a href="{% url 'registro' %}" 
+                   class="block text-center py-3 px-4 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 text-white font-semibold shadow hover:from-emerald-600 hover:to-emerald-700 transition-all duration-200">
+                    Registrarse
+                </a>
             {% endif %}
         </div>
     </nav>
-    <!-- Contenido principal -->
+
+    <!-- Contenido Principal -->
     <main class="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {% block content %}
         {% endblock %}
     </main>
+
     <!-- Footer -->
-    <footer class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-slate-200 text-center py-6 mt-8 border-t border-slate-700/50">
-        <p class="text-sm font-medium">© 2025 SmartParking | Todos los derechos reservados</p>
+    <footer class="bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 text-slate-300 border-t border-slate-700/50 mt-auto">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left">
+                <div>
+                    <div class="flex items-center justify-center md:justify-start gap-2 mb-3">
+                        <div class="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center shadow-lg">
+                            <span class="text-white font-bold text-sm">S</span>
+                        </div>
+                        <span class="text-xl font-bold bg-gradient-to-r from-emerald-300 to-sky-300 bg-clip-text text-transparent">SmartParking</span>
+                    </div>
+                    <p class="text-sm text-slate-400">Sistema inteligente de gestión de estacionamientos UDH</p>
+                </div>
+                <div class="text-center md:text-right">
+                    <p class="text-xs text-slate-500">© 2025 SmartParking UDH</p>
+                    <p class="text-xs text-slate-500">Todos los derechos reservados</p>
+                </div>
+            </div>
+        </div>
     </footer>
-    <!-- Script menú móvil -->
+
+    {% block scripts %}
+    <!-- Script Menú Móvil -->
     <script>
         const btn = document.getElementById("mobile-menu-btn");
         const menu = document.getElementById("mobile-menu");
         btn.addEventListener("click", () => {
             menu.classList.toggle("hidden");
         });
+
+        // Cerrar menú al hacer clic fuera
+        document.addEventListener("click", (e) => {
+            if (!btn.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.add("hidden");
+            }
+        });
     </script>
+    {% endblock %}
 </body>
 </html>

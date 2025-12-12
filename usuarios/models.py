@@ -1,23 +1,64 @@
 from django.db import models
 from django.contrib.auth.models import User
 
-# Create your models here.
 
 class Perfil(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    telefono = models.CharField(max_length=20, blank=True, null=True)
-    direccion = models.CharField(max_length=200, blank=True, null=True)
-    foto = models.ImageField(upload_to="fotos_perfil/", default="fotos_perfil/default.png")
-    # Referencia por cadena para evitar problemas de importación (Rol definido más abajo)
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name='perfil'
+    )
+
+    # === DATOS PERSONALES ===
+    dni = models.CharField(
+        max_length=8,
+        unique=True,
+        blank=True,     # ← Permite vacío
+        null=True,      # ← Permite NULL en BD
+        help_text="DNI del usuario (8 dígitos)"
+    )
+
+    telefono = models.CharField(
+        max_length=20,
+        blank=True,
+        null=True,
+        help_text="Teléfono del usuario"
+    )
+
+    direccion = models.CharField(
+        max_length=200,
+        blank=True,
+        null=True,
+        help_text="Dirección del usuario"
+    )
+
+    foto = models.ImageField(
+        upload_to='fotos_perfil/',
+        default='fotos_perfil/default.png',
+        blank=True,
+        null=True
+    )
+
+    # === ROL ===
     rol = models.ForeignKey(
         'usuarios.Rol',
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name='usuarios',
+        related_name='usuarios'
     )
+
     def __str__(self):
-        return self.user.username
+        return f"{self.user.get_full_name()} ({self.user.username})"
+
+    def get_nombre_completo(self):
+        return self.user.get_full_name().strip() or self.user.username
+
+    class Meta:
+        verbose_name = "Perfil de usuario"
+        verbose_name_plural = "Perfiles de usuarios"
+        ordering = ['user__first_name', 'user__last_name']
+
 
 class Rol(models.Model):
     """
@@ -58,5 +99,4 @@ class Rol(models.Model):
         ]
     
     def __str__(self):
-        # Devuelve la etiqueta amigable definida en choices
         return self.get_nombre_display()

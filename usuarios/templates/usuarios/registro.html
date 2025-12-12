@@ -3,35 +3,30 @@
 {% block content %}
 <div class="min-h-screen bg-gradient-to-r from-purple-100 via-emerald-50 to-sky-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full space-y-8">
-        <div>
-            <div class="mx-auto h-12 w-12 rounded-full bg-emerald-600 flex items-center justify-center">
-                <span class="text-white font-bold text-lg">S</span>
+        <div class="text-center">
+            <div class="mx-auto h-14 w-14 rounded-full bg-emerald-600 flex items-center justify-center shadow-lg">
+                <span class="text-white font-bold text-2xl">S</span>
             </div>
-            <h2 class="mt-6 text-center text-3xl font-extrabold text-gray-900">
+            <h2 class="mt-6 text-3xl font-extrabold text-gray-900">
                 Crear cuenta nueva
             </h2>
-            <p class="mt-2 text-center text-sm text-gray-600">
+            <p class="mt-2 text-sm text-gray-600">
                 O
-                <a href="{% url 'login' %}" class="font-medium text-emerald-600 hover:text-emerald-500">
+                <a href="{% url 'login' %}" class="font-medium text-emerald-600 hover:text-emerald-500 transition">
                     inicia sesión si ya tienes cuenta
                 </a>
             </p>
         </div>
 
-        <div class="bg-white shadow-xl rounded-lg p-8">
-            <form method="POST" enctype="multipart/form-data" class="space-y-6">
+        <div class="bg-white shadow-xl rounded-2xl p-8 border border-gray-100">
+            <form method="POST" enctype="multipart/form-data" class="space-y-6" novalidate>
                 {% csrf_token %}
-                
-                <!-- Mostrar errores si hay -->
-                {% if form.errors %}
-                <div class="rounded-md bg-red-50 p-4">
+
+                <!-- Errores generales -->
+                {% if form.non_field_errors %}
+                <div class="rounded-lg bg-red-50 p-4 border border-red-200">
                     <div class="text-sm text-red-700">
                         <ul class="list-disc pl-5 space-y-1">
-                            {% for field in form %}
-                                {% for error in field.errors %}
-                                    <li>{{ field.label }}: {{ error }}</li>
-                                {% endfor %}
-                            {% endfor %}
                             {% for error in form.non_field_errors %}
                                 <li>{{ error }}</li>
                             {% endfor %}
@@ -39,58 +34,159 @@
                     </div>
                 </div>
                 {% endif %}
-                
-                <div class="space-y-4">
+
+                <!-- NOMBRE Y APELLIDO -->
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
                     <div>
-                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">Usuario</label>
-                        <input type="text" id="{{ form.username.id_for_label }}" name="{{ form.username.name }}" 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                               value="{{ form.username.value|default_if_none:'' }}">
+                        <label for="{{ form.first_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Nombre <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="{{ form.first_name.id_for_label }}" name="{{ form.first_name.name }}"
+                               class="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition {% if form.first_name.errors %}border-red-500{% else %}border-gray-300{% endif %}"
+                               value="{{ form.first_name.value|default_if_none:'' }}" 
+                               placeholder="Juan" required autocomplete="given-name">
+                        {% if form.first_name.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.first_name.errors|join:", " }}</p>
+                        {% endif %}
                     </div>
 
                     <div>
-                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">Email</label>
-                        <input type="email" id="{{ form.email.id_for_label }}" name="{{ form.email.name }}" 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                               value="{{ form.email.value|default_if_none:'' }}">
-                    </div>
-
-                    <div>
-                        <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700">Contraseña</label>
-                        <input type="password" id="{{ form.password1.id_for_label }}" name="{{ form.password1.name }}" 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                    </div>
-
-                    <div>
-                        <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700">Confirmar contraseña</label>
-                        <input type="password" id="{{ form.password2.id_for_label }}" name="{{ form.password2.name }}" 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500">
-                    </div>
-
-                    <div>
-                        <label for="{{ form.telefono.id_for_label }}" class="block text-sm font-medium text-gray-700">Teléfono (opcional)</label>
-                        <input type="text" id="{{ form.telefono.id_for_label }}" name="{{ form.telefono.name }}" 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                               value="{{ form.telefono.value|default_if_none:'' }}">
-                    </div>
-
-                    <div>
-                        <label for="{{ form.direccion.id_for_label }}" class="block text-sm font-medium text-gray-700">Dirección (opcional)</label>
-                        <input type="text" id="{{ form.direccion.id_for_label }}" name="{{ form.direccion.name }}" 
-                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500"
-                               value="{{ form.direccion.value|default_if_none:'' }}">
-                    </div>
-
-                    <div>
-                        <label for="{{ form.foto.id_for_label }}" class="block text-sm font-medium text-gray-700">Foto de perfil (opcional)</label>
-                        <input type="file" id="{{ form.foto.id_for_label }}" name="{{ form.foto.name }}" accept="image/*"
-                               class="mt-1 block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-emerald-50 file:text-emerald-700 hover:file:bg-emerald-100">
+                        <label for="{{ form.last_name.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Apellido <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="{{ form.last_name.id_for_label }}" name="{{ form.last_name.name }}"
+                               class="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition {% if form.last_name.errors %}border-red-500{% else %}border-gray-300{% endif %}"
+                               value="{{ form.last_name.value|default_if_none:'' }}" 
+                               placeholder="Pérez" required autocomplete="family-name">
+                        {% if form.last_name.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.last_name.errors|join:", " }}</p>
+                        {% endif %}
                     </div>
                 </div>
 
+                <!-- DNI -->
                 <div>
-                    <button type="submit" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500">
-                        Crear cuenta
+                    <label for="{{ form.dni.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        DNI <span class="text-red-500">*</span>
+                    </label>
+                    <input type="text" id="{{ form.dni.id_for_label }}" name="{{ form.dni.name }}"
+                           class="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition {% if form.dni.errors %}border-red-500{% else %}border-gray-300{% endif %}"
+                           value="{{ form.dni.value|default_if_none:'' }}" 
+                           placeholder="12345678" maxlength="8" inputmode="numeric" required autocomplete="off">
+                    {% if form.dni.errors %}
+                        <p class="mt-1 text-xs text-red-600">{{ form.dni.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- USUARIO Y EMAIL -->
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Usuario <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" id="{{ form.username.id_for_label }}" name="{{ form.username.name }}"
+                               class="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition {% if form.username.errors %}border-red-500{% else %}border-gray-300{% endif %}"
+                               value="{{ form.username.value|default_if_none:'' }}" 
+                               placeholder="juan123" required autocomplete="username">
+                        {% if form.username.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.username.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Email <span class="text-red-500">*</span>
+                        </label>
+                        <input type="email" id="{{ form.email.id_for_label }}" name="{{ form.email.name }}"
+                               class="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition {% if form.email.errors %}border-red-500{% else %}border-gray-300{% endif %}"
+                               value="{{ form.email.value|default_if_none:'' }}" 
+                               placeholder="juan@example.com" required autocomplete="email">
+                        {% if form.email.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.email.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- CONTRASEÑAS -->
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="{{ form.password1.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Contraseña <span class="text-red-500">*</span>
+                        </label>
+                        <input type="password" id="{{ form.password1.id_for_label }}" name="{{ form.password1.name }}"
+                               class="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition {% if form.password1.errors %}border-red-500{% else %}border-gray-300{% endif %}"
+                               required autocomplete="new-password">
+                        {% if form.password1.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.password1.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password2.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Confirmar <span class="text-red-500">*</span>
+                        </label>
+                        <input type="password" id="{{ form.password2.id_for_label }}" name="{{ form.password2.name }}"
+                               class="mt-1 block w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition {% if form.password2.errors %}border-red-500{% else %}border-gray-300{% endif %}"
+                               required autocomplete="new-password">
+                        {% if form.password2.errors %}
+                            <p class="mt-1 text-xs text-red-600">{{ form.password2.errors|join:", " }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- TELÉFONO Y DIRECCIÓN (OPCIONALES) -->
+                <div class="grid grid-cols-1 gap-5 sm:grid-cols-2">
+                    <div>
+                        <label for="{{ form.telefono.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Teléfono <span class="text-gray-400">(opcional)</span>
+                        </label>
+                        <input type="tel" id="{{ form.telefono.id_for_label }}" name="{{ form.telefono.name }}"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+                               value="{{ form.telefono.value|default_if_none:'' }}" 
+                               placeholder="987654321" autocomplete="tel">
+                    </div>
+
+                    <div>
+                        <label for="{{ form.direccion.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                            Dirección <span class="text-gray-400">(opcional)</span>
+                        </label>
+                        <input type="text" id="{{ form.direccion.id_for_label }}" name="{{ form.direccion.name }}"
+                               class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition"
+                               value="{{ form.direccion.value|default_if_none:'' }}" 
+                               placeholder="Av. Siempre Viva 123" autocomplete="street-address">
+                    </div>
+                </div>
+
+                <!-- FOTO DE PERFIL -->
+                <div>
+                    <label for="{{ form.foto.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                        Foto de perfil <span class="text-gray-400">(opcional)</span>
+                    </label>
+                    <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-lg hover:border-emerald-500 transition">
+                        <div class="space-y-1 text-center">
+                            <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 473H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-8v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            <div class="flex text-sm text-gray-600">
+                                <label for="{{ form.foto.id_for_label }}" class="relative cursor-pointer bg-white rounded-md font-medium text-emerald-600 hover:text-emerald-500 focus-within:outline-none">
+                                    <span>Subir foto</span>
+                                    <input id="{{ form.foto.id_for_label }}" name="{{ form.foto.name }}" type="file" accept="image/*" class="sr-only">
+                                </label>
+                                <p class="pl-1">o arrastra aquí</p>
+                            </div>
+                            <p class="text-xs text-gray-500">PNG, JPG hasta 2MB</p>
+                        </div>
+                    </div>
+                    {% if form.foto.errors %}
+                        <p class="mt-1 text-xs text-red-600">{{ form.foto.errors|join:", " }}</p>
+                    {% endif %}
+                </div>
+
+                <!-- BOTÓN -->
+                <div class="pt-4">
+                    <button type="submit"
+                            class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-bold text-white bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 transform transition hover:scale-[1.02] active:scale-[0.98]">
+                        Crear mi cuenta
                     </button>
                 </div>
             </form>
